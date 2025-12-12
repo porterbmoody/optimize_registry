@@ -424,17 +424,20 @@ class Registry:
                     'Subkey Count': 0,
                     'Subkeys': []
                 })
-        
         return pd.DataFrame(results)
 
     def count_second_layer(self):
         for hive in self.hives:
-            number_of_subkeys = self.count_subkeys(hive)
-            for sub_key in number_of_subkeys:
-                subkey = winreg.OpenKey(hive, )
-            print(hive)
+            number_of_subkeys = self.count_subkeys(hive[1])
             print(number_of_subkeys)
-        return number_of_subkeys
+            for key_number in range(3):
+                print(key_number)
+                subkey_name = winreg.EnumKey(hive[1], key_number)
+                print(subkey_name)
+                subkey = winreg.OpenKey(hive[1], subkey_name)
+                print(subkey)
+            # print(number_of_subkeys)
+        # return number_of_subkeys
 
     def close_hives(self):
         """Close all open registry hive connections."""
@@ -455,10 +458,14 @@ class Registry:
 if __name__ == "__main__":
     registry = Registry()
     # print("\nSummary:")
-    # print(registry.get_summary())
+    # registry.close_hives()
 
+
+#%%
+
+# winreg.EnumKey(registry.hives[0], 0)
+# registry.count_subkeys(registry.hives[0][1])
 winreg.EnumKey(registry.hives[0][1], 1)
-
 
 # %%
 key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, "Software")
