@@ -79,3 +79,239 @@ import base64
 #     json.dump(registry_json, f, indent=4, ensure_ascii=False)
 
 # Connect to the local machine's HKEY_CURRENT_USER hive
+
+
+hive = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)
+def get_main_subkeys(hive):
+    """List the top-level subkeys of a registry hive."""
+    subkeys = []
+    try:
+        i = 0
+        while True:
+            try:
+                subkey_name = winreg.EnumKey(hive, i)
+                subkeys.append(subkey_name)
+                i += 1
+            except OSError:
+                break
+    except PermissionError:
+        print("Access denied to this hive.")
+    return subkeys
+
+main_folders = get_main_subkeys(hive)
+#%%
+import winreg
+import socket
+
+def get_subkeys(hive_handle):
+    subkeys = []
+    with winreg.OpenKey(hive_handle, "") as root:
+        i = 0
+        while True:
+            try:
+                subkeys.append(winreg.EnumKey(root, i))
+                i += 1
+            except OSError:
+                break
+    return subkeys
+
+hkeys = [
+	"LOCAL_MACHINE",
+	"USERS",
+	"CURRENT_USER",
+	"CLASSES_ROOT",
+	"CURRENT_CONFIG"
+]
+
+for hkey in hkeys:
+    print(getattr(winreg, f"HKEY_{hkey}"))
+
+hives = {
+	hkey: winreg.ConnectRegistry(str(socket.gethostname()), getattr(winreg, f"HKEY_{hkey}"))
+	for hkey in hkeys
+}
+
+for hkey in hkeys:
+    print(f'{hkey} => {get_subkeys(hives[hkey])}')
+
+
+#%%
+
+import winreg
+import socket
+
+computer = f"\\\\{socket.gethostname()}"  # UNC format
+print("Computer:", computer)
+
+# Root hives
+hkey_names = [
+    "LOCAL_MACHINE",
+    "USERS",
+    "CURRENT_USER",
+    "CLASSES_ROOT",
+    "CURRENT_CONFIG"
+]
+hives = {
+    name: winreg.ConnectRegistry(computer, getattr(winreg, f"HKEY_{name}"))
+    for name in hkey_names
+}
+print("Hive handles:", hives)
+
+# Function to get top-level subkeys of a hive
+def get_subkeys(hive_handle):
+    subkeys = []
+    with winreg.OpenKey(hive_handle, "") as root:
+        i = 0
+        while True:
+            try:
+                subkeys.append(winreg.EnumKey(root, i))
+                i += 1
+            except OSError:
+                break
+    return subkeys
+
+# Example: list subkeys under HKEY_LOCAL_MACHINE
+lm_hive = hives["LOCAL_MACHINE"]
+top_subkeys = get_subkeys(lm_hive)
+print("\nTop-level subkeys under HKEY_LOCAL_MACHINE:")
+for key in top_subkeys:
+    print(" ", key)
+
+
+# hives = [winreg.ConnectRegistry(None, hkey) for hkey in hkeys]
+# print(get_main_subkeys(hive2))
+
+#%%
+winreg.CloseKey(hive_handle)
+
+sys.stdout = open("registry_dump.txt", "w", encoding="utf-8")
+# print_registry(hive_handle)
+sys.stdout.close()
+
+
+
+#%%
+
+import winreg
+import socket
+import pandas as pd
+import matplotlib.pyplot as plt
+
+class Registry:
+
+    def __init__(self):
+        self.data = {
+            'hkeys' : [name for name in dir(winreg) if name.startswith('HKEY_')],
+            'computer' : r"{}".format(socket.gethostname()),
+            }
+        self.open_hives()
+        self.count_first_layer()
+        # print(self.data)
+
+    @staticmethod
+    def get_subkeys(hive_handle):
+        subkeys = []
+        try:
+            with winreg.OpenKey(hive_handle, "") as root:
+                i = 0
+                while True:
+                    try:
+                        subkeys.append(winreg.EnumKey(root, i))
+                        i += 1
+                    except OSError:
+                        break
+        except PermissionError:
+            subkeys.append("<Permission Denied>")
+        return subkeys
+
+    def open_hives(self):
+        self.hives = []
+        for hkey in self.data['hkeys']:
+            # print(hkey)
+            if hasattr(winreg, hkey):
+                # print(getattr(winreg, f"{hkey}"))
+                hkey_attribute = getattr(winreg, f"{hkey}")
+                hive = winreg.ConnectRegistry(self.data['computer'], hkey_attribute)
+                self.hives.append(hive)
+            else:
+                print(f"{hkey} not found in winreg")
+        print(self.hives)
+
+    @staticmethod
+    def count_subkeys(key):
+        i = 0
+        while True:
+            try:
+                winreg.EnumKey(key, i)
+                i += 1
+            except OSError:
+                break
+        return i
+    
+    def count_first_layer(self):
+        for n, hive in enumerate(self.hives):
+            number_of_subkeys = self.count_subkeys(self.hives[n])
+            print(f"""{self.data['hkeys'][n]}\n{number_of_subkeys}""")
+        data = pd.DataFrame({'folder':[self.data['hkeys']], 'number':number_of_subkeys})
+        data.plot()
+        plt.show()
+
+registry = Registry()
+
+# %%
+# registry.hives[0].OpenKey()
+key = winreg.OpenKey(registry.hives[0], '')
+
+i = 0
+while True:
+	try:
+		subkey = winreg.EnumKey(key, i)
+		print(subkey)
+		i += 1
+	except OSError:
+		break
+
+
+#%%
+
+def enum_subkeys(key):
+	i = 0
+	result = []
+	while True:
+		try:
+			result.append(winreg.EnumKey(key, i))
+			i += 1
+		except OSError:
+			break
+	return result
+
+def enum_values(key):
+	i = 0
+	values = []
+	while True:
+		try:
+			name, value, val_type = winreg.EnumValue(key, i)
+			values.append((name, value, val_type))
+			i += 1
+		except OSError:
+			break
+	return values
+
+def walk(key, path=""):
+	subkeys = enum_subkeys(key)
+	values = enum_values(key)
+
+	print("PATH:", path or "(hive root)")
+	if values:
+		for name, val, _ in values:
+			print("   ", name, "=", val)
+
+	for sk in subkeys:
+		try:
+			with winreg.OpenKey(key, sk) as sub:
+				walk(sub, f"{path}\\{sk}" if path else sk)
+		except PermissionError:
+			print("   SKIPPED (no access):", sk)
+
+walk(key)
+
