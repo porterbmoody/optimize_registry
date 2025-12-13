@@ -333,8 +333,9 @@ walk(key)
 
 import winreg
 import socket
-# import matplotlib as plt
+import matplotlib as plt
 import pandas as pd
+plt.style.use('dark_background')
 
 class Registry:
 
@@ -344,13 +345,9 @@ class Registry:
             'computer': socket.gethostname(),
         }
         self.open_hives()
-        self.results = self.count_first_layer()
-        print(self.count_second_layer())
-        # self.results.plot(x='Category', y='Value', kind='bar')
-        # plt.title('Bar Chart Example')
-        # plt.xlabel('Category')
-        # plt.ylabel('Value')
-        # plt.show()
+        self.count_first_layer()
+        self.count_second_layer()
+        print(self.first_layer)
 
     @staticmethod
     def get_subkeys(hive_handle):
@@ -406,38 +403,70 @@ class Registry:
 
     def count_first_layer(self):
         """Count subkeys in the first layer of each hive."""
-        results = []
+        self.results = []
         for hkey_name, hive in self.hives:
             try:
                 number_of_subkeys = self.count_subkeys(hive)
                 subkey_names = self.get_subkeys(hive)
-                results.append({
-                    'Hive': hkey_name,
-                    'Subkey Count': number_of_subkeys,
-                    'Subkeys': subkey_names[:10]
+                self.results.append({
+                    'hive': hkey_name,
+                    'subkey_count': number_of_subkeys,
+                    'subkeys': subkey_names[:10]
                 })
-                # print(f"{hkey_name}: {number_of_subkeys} subkeys")
+                print(f"{hkey_name}: {number_of_subkeys} subkeys")
             except Exception as e:
                 print(f"Error processing {hkey_name}: {e}")
-                results.append({
-                    'Hive': hkey_name,
-                    'Subkey Count': 0,
-                    'Subkeys': []
+                self.results.append({
+                    'hive': hkey_name,
+                    'subkey_count': 0,
+                    'subkeys': []
                 })
-        return pd.DataFrame(results)
+        self.first_layer = pd.DataFrame(self.results)
+        self.first_layer.plot(x='hive', y='subkey_count', kind='bar', title='subkey counts', xlabel='hive',ylabel='count')
 
     def count_second_layer(self):
-        for hive in self.hives:
-            number_of_subkeys = self.count_subkeys(hive[1])
-            print(number_of_subkeys)
-            for key_number in range(3):
-                print(key_number)
-                subkey_name = winreg.EnumKey(hive[1], key_number)
-                print(subkey_name)
-                subkey = winreg.OpenKey(hive[1], subkey_name)
-                print(subkey)
-            # print(number_of_subkeys)
-        # return number_of_subkeys
+        """Count keys within each first-level subkey."""
+        # results = []
+        for hive_name, hive in self.hives:
+            number_of_subkeys = self.count_subkeys(hive)
+            for key_number in range(number_of_subkeys):
+                try:
+                    subkey_name = winreg.EnumKey(hive, key_number)
+                    subkey = winreg.OpenKey(hive, subkey_name)
+                    second_level_count = self.count_subkeys(subkey)
+                    print(f'{subkey_name}={second_level_count}')
+                    print(f"    └─ Contains {second_level_count} subkeys")
+                except PermissionError:
+                     print(subkey_name)
+                except Exception as e:
+                    print(f"    └─ <Error: {e}>")
+                    print(subkey_name)
+                # print(subkey_name)
+                # print(f"    └─ Contains {second_level_count} subkeys")
+            # print(f"\n{'='*60}")
+            # print(f"Processing {hive_name}")
+            # print(f"{'='*60}")
+            # print(f"First-level subkeys: {number_of_subkeys}\n")
+                # try:
+                    # print(f"[{key_number}] {subkey_name}")
+                    # results.append({
+                        # 'Hive': hive_name,
+                        # 'First_Level_Key': subkey_name,
+                        # 'Second_Level_Count': second_level_count
+                    # })
+                    # subkey.Close()
+                    # print(f"    └─ <Permission Denied>")
+                    # results.append({
+                        # 'Hive': hive_name,
+                        # 'First_Level_Key': subkey_name,
+                        # 'Second_Level_Count': '<Permission Denied>'
+                    # })
+                    # results.append({
+                        # 'Hive': hive_name,
+                        # 'First_Level_Key': subkey_name if 'subkey_name' in locals() else '<Unknown>',
+                        # 'Second_Level_Count': f'<Error>'
+                    # })
+        # return pd.DataFrame(results)
 
     def close_hives(self):
         """Close all open registry hive connections."""
