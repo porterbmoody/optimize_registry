@@ -347,7 +347,7 @@ class Registry:
                     subkey_name = winreg.EnumKey(hive, key_number)
                     subkey = winreg.OpenKey(hive, subkey_name)
                     second_level_count = self.count_subkeys(subkey)
-                    logger.info(f"{hive_name}\\{subkey_name} = {second_level_count}")
+                    logger.info(f"{hive_name}: {subkey_name} = {second_level_count}")
                     # logger.info(f" └─ Contains {second_level_count} subkeys")
                 except PermissionError:
                     logger.warning(f"{hive_name}\\{subkey_name} | Permission denied")
@@ -384,3 +384,5 @@ key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, "Software")
 
 key
 winreg.QueryInfoKey(key)
+
+git add .;git commit -m 'changes';git pull;git push;
