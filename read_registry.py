@@ -1,80 +1,5 @@
-import winreg
-import json
-import base64
-
-# def convert_value(value, value_type):
-#     """Convert registry values into JSON-serializable types."""
-#     if value_type == winreg.REG_BINARY:
-#         # Convert bytes to base64 string (safe for JSON)
-#         return base64.b64encode(value).decode('utf-8')
-#     elif value_type == winreg.REG_MULTI_SZ:
-#         return list(value)
-#     elif value_type in (winreg.REG_SZ, winreg.REG_EXPAND_SZ):
-#         return str(value)
-#     else:
-#         return value
-
-# def read_registry_key(key, path=""):
-#     """Recursively read registry key and convert to JSON-friendly dict."""
-#     result = {}
-#     try:
-#         registry_key = winreg.OpenKey(key, path)
-#         # read subkeys
-#         i = 0
-#         while True:
-#             try:
-#                 subkey_name = winreg.EnumKey(registry_key, i)
-#                 result[subkey_name] = read_registry_key(registry_key, subkey_name)
-#                 i += 1
-#             except OSError:
-#                 break
-#         # read values
-#         j = 0
-#         while True:
-#             try:
-#                 value_name, value_data, value_type = winreg.EnumValue(registry_key, j)
-#                 result[value_name] = convert_value(value_data, value_type)
-#                 j += 1
-#             except OSError:
-#                 break
-#         winreg.CloseKey(registry_key)
-#     except PermissionError:
-#         result["ERROR"] = "Access denied"
-#     except Exception as e:
-#         result["ERROR"] = str(e)
-#     return result
-
-# # Example: export HKEY_CURRENT_USER
-# registry_json = read_registry_key(winreg.HKEY_CURRENT_USER)
-
-# with open("registry.json", "w", encoding="utf-8") as f:
-#     json.dump(registry_json, f, indent=4, ensure_ascii=False)
-
-# Connect to the local machine's HKEY_CURRENT_USER hive
-hive_handle = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)
-print(hive_handle)
-
-REG_PATH = r"Control Panel\Mouse"
-
-def get_value():
-    with winreg.OpenKey(hive_handle, REG_PATH, 0, winreg.KEY_READ) as registry_key:
-        print(f"Successfully opened key: HKEY_CURRENT_USER\\{REG_PATH}")
-        value, reg_type = winreg.QueryValueEx(registry_key, 'MouseSensitivity')
-    winreg.CloseKey(hive_handle)
-    return value, reg_type
-print(get_value())
-
-#%%
-
-
-
-import winreg
-
-# Connect to HKEY_CURRENT_USER
-# hive_handle = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)
 
 hive = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)
-print(hive)
 def get_main_subkeys(hive):
     """List the top-level subkeys of a registry hive."""
     subkeys = []
@@ -92,15 +17,7 @@ def get_main_subkeys(hive):
     return subkeys
 
 main_folders = get_main_subkeys(hive)
-print("Main folders in HKEY_CURRENT_USER:")
-for folder in main_folders:
-    print(f"- {folder}")
-
-winreg.CloseKey(hive)
-
-
 #%%
-
 import winreg
 import socket
 
@@ -141,7 +58,6 @@ for hkey in hkeys:
 import winreg
 import socket
 
-# Connect to local computer
 computer = f"\\\\{socket.gethostname()}"  # UNC format
 print("Computer:", computer)
 
@@ -153,8 +69,6 @@ hkey_names = [
     "CLASSES_ROOT",
     "CURRENT_CONFIG"
 ]
-
-# Connect to all root hives
 hives = {
     name: winreg.ConnectRegistry(computer, getattr(winreg, f"HKEY_{name}"))
     for name in hkey_names
@@ -186,17 +100,6 @@ for key in top_subkeys:
 # print(get_main_subkeys(hive2))
 
 #%%
-
-# with winreg.OpenKey(hive_handle, r"SOFTWARE\Microsoft\Windows\CurrentVersion") as key:
-#     i = 0
-#     while True:
-#         try:
-#             subkey_name = winreg.EnumKey(key, i)
-#             print(subkey_name)
-#             i += 1
-#         except OSError:
-#             break
-
 winreg.CloseKey(hive_handle)
 
 sys.stdout = open("registry_dump.txt", "w", encoding="utf-8")
@@ -334,8 +237,19 @@ walk(key)
 import winreg
 import socket
 import matplotlib as plt
+import matplotlib.style
 import pandas as pd
-plt.style.use('dark_background')
+import logging
+
+matplotlib.style.use('dark_background')
+
+logging.basicConfig(
+	filename="registry_scan.log",
+	level=logging.INFO,
+	format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 class Registry:
 
@@ -345,8 +259,8 @@ class Registry:
             'computer': socket.gethostname(),
         }
         self.open_hives()
-        self.count_first_layer()
-        self.count_second_layer()
+        self.layer1()
+        self.layer2()
         print(self.first_layer)
 
     @staticmethod
@@ -380,7 +294,6 @@ class Registry:
     def query_subkeys(hive_handle):
         """Count the number of subkeys in a registry key."""
         try:
-            # Use QueryInfoKey for more efficient counting
             num_subkeys, num_values, last_modified = winreg.QueryInfoKey(hive_handle)
             print(winreg.QueryInfoKey(hive_handle))
             return num_subkeys
@@ -401,7 +314,7 @@ class Registry:
             except Exception as e:
                 print(f"Error connecting to {hkey_name}: {e}")
 
-    def count_first_layer(self):
+    def layer1(self):
         """Count subkeys in the first layer of each hive."""
         self.results = []
         for hkey_name, hive in self.hives:
@@ -424,49 +337,22 @@ class Registry:
         self.first_layer = pd.DataFrame(self.results)
         self.first_layer.plot(x='hive', y='subkey_count', kind='bar', title='subkey counts', xlabel='hive',ylabel='count')
 
-    def count_second_layer(self):
+    def layer2(self):
         """Count keys within each first-level subkey."""
-        # results = []
         for hive_name, hive in self.hives:
             number_of_subkeys = self.count_subkeys(hive)
+            logger.info(f"HIVE: {hive_name} | Subkeys: {number_of_subkeys}")
             for key_number in range(number_of_subkeys):
                 try:
                     subkey_name = winreg.EnumKey(hive, key_number)
                     subkey = winreg.OpenKey(hive, subkey_name)
                     second_level_count = self.count_subkeys(subkey)
-                    print(f'{subkey_name}={second_level_count}')
-                    print(f"    └─ Contains {second_level_count} subkeys")
+                    logger.info(f"{hive_name}\\{subkey_name} = {second_level_count}")
+                    # logger.info(f" └─ Contains {second_level_count} subkeys")
                 except PermissionError:
-                     print(subkey_name)
+                    logger.warning(f"{hive_name}\\{subkey_name} | Permission denied")
                 except Exception as e:
-                    print(f"    └─ <Error: {e}>")
-                    print(subkey_name)
-                # print(subkey_name)
-                # print(f"    └─ Contains {second_level_count} subkeys")
-            # print(f"\n{'='*60}")
-            # print(f"Processing {hive_name}")
-            # print(f"{'='*60}")
-            # print(f"First-level subkeys: {number_of_subkeys}\n")
-                # try:
-                    # print(f"[{key_number}] {subkey_name}")
-                    # results.append({
-                        # 'Hive': hive_name,
-                        # 'First_Level_Key': subkey_name,
-                        # 'Second_Level_Count': second_level_count
-                    # })
-                    # subkey.Close()
-                    # print(f"    └─ <Permission Denied>")
-                    # results.append({
-                        # 'Hive': hive_name,
-                        # 'First_Level_Key': subkey_name,
-                        # 'Second_Level_Count': '<Permission Denied>'
-                    # })
-                    # results.append({
-                        # 'Hive': hive_name,
-                        # 'First_Level_Key': subkey_name if 'subkey_name' in locals() else '<Unknown>',
-                        # 'Second_Level_Count': f'<Error>'
-                    # })
-        # return pd.DataFrame(results)
+                    logger.error(f"{hive_name}\\{subkey_name} | Error: {e}")
 
     def close_hives(self):
         """Close all open registry hive connections."""
@@ -486,9 +372,6 @@ class Registry:
 
 if __name__ == "__main__":
     registry = Registry()
-    # print("\nSummary:")
-    # registry.close_hives()
-
 
 #%%
 
