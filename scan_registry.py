@@ -131,25 +131,27 @@ class Registry:
                             subsubkey_name = winreg.EnumKey(subkey, subkey_number)
                             subsubkey = winreg.OpenKey(subkey, subsubkey_name)
                             subsubkey_count = self.count_subkeys(subsubkey)
-                            print(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}")
+                            # print(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}")
                             # self.log_file.write(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}\n")
                             for subsubkey_number in range(subsubkey_count):
                                 try:
                                     subsubsubkey_name = winreg.EnumKey(subsubkey, subsubkey_number)
                                     subsubsubkey = winreg.OpenKey(subsubkey, subsubsubkey_name)
                                     subsubsubkey_count = self.count_subkeys(subsubsubkey)
-                                    # print(f"""{hive[0]} subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}""")
-                                    # self.log_file.write(f"""{hive[0]},{subkey_name},{subsubkey_name},{subsubsubkey_name},{subsubsubkey_count}\n""")
-                                    for subsubsubkey_number in range(subsubsubkey_count):
-                                        # try:
-                                        subsubsubsubkey_name = winreg.EnumKey(subsubsubkey, subsubsubkey_number)
-                                        subsubsubsubkey = winreg.OpenKey(subsubsubkey, subsubsubsubkey_name)
-                                        subsubsubsubkey_count = self.count_subkeys(subsubsubsubkey)
-                                        # print(f"""{hive[0]} subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}""")
-                                        # print(f"""{hive[0]},{subkey_name},{subkey_count},{subsubkey_name},{subsubkey_count},{subsubsubkey_name},{subsubsubkey_count},{subsubsubsubkey_name},{subsubsubsubkey_count}""")
-                                        self.log_file.write(f"""{hive[0]},{subkey_name},{subkey_count},{subsubkey_name},{subsubkey_count},{subsubsubkey_name},{subsubsubkey_count},{subsubsubsubkey_name},{subsubsubsubkey_count}\n""")
-                                        # except Exception as error:
-                                            # self.log_file.write(f"hive=={hive[0]} subsubkey_number=={subsubkey_number} error=={error}\n")
+                                    if subsubsubkey_count == 0:
+                                        print(f"""{hive[0]} subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}""")
+                                        self.log_file.write(f"""{hive[0]},{subkey_name},{subsubkey_name},{subsubsubkey_name},{subsubsubkey_count}\n""")
+                                    else:
+                                        for subsubsubkey_number in range(subsubsubkey_count):
+                                            try:
+                                                subsubsubsubkey_name = winreg.EnumKey(subsubsubkey, subsubsubkey_number)
+                                                subsubsubsubkey = winreg.OpenKey(subsubsubkey, subsubsubsubkey_name)
+                                                subsubsubsubkey_count = self.count_subkeys(subsubsubsubkey)
+                                                print(f"""{hive[0]} subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}""")
+                                                print(f"""{hive[0]},{subkey_name},{subkey_count},{subsubkey_name},{subsubkey_count},{subsubsubkey_name},{subsubsubkey_count},{subsubsubsubkey_name},{subsubsubsubkey_count}""")
+                                                self.log_file.write(f"""{hive[0]},{subkey_name},{subkey_count},{subsubkey_name},{subsubkey_count},{subsubsubkey_name},{subsubsubkey_count},{subsubsubsubkey_name},{subsubsubsubkey_count}\n""")
+                                            except Exception as error:
+                                                self.log_file.write(f"hive=={hive[0]} subsubkey_number=={subsubkey_number} error=={error}\n")
                                 except Exception as error:
                                     self.log_file.write(f"hive=={hive[0]} subsubkey_number=={subsubkey_number} error=={error}\n")
                         except Exception as error:
