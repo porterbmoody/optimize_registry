@@ -57,7 +57,7 @@ class Registry:
             return num_subkeys
         except Exception as e:
             return 0
-    
+
     def open_log(self, log_number):
         self.log_path = f'''logs/registry_scan{log_number}.log'''
         print(f'''log_path{self.log_path}''')

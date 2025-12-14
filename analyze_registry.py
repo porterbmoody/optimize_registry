@@ -26,29 +26,32 @@ import csv
 #%%
 import pandas as pd
 
-file = 'logs/registry_scan6.log'
+file_path = 'logs/registry_scan6.log'
 rows = []
-max_lines = 1000
+max_lines = 10000
 
-with open(file, 'r', encoding='utf-8') as f:
-    for i, line in enumerate(f):
-        if i >= max_lines:
-            break
-        row = line.strip().split('||')
-        print(row)
-        # row[2] = int(row[2])
-        # row[4] = int(row[4])
-        # row[6] = int(row[6])
-        # row[8] = int(row[8])
-        rows.append(row)
+def read_csv(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for i, line in enumerate(f):
+            if i >= max_lines:
+                break
+            row = line.strip().split('||')
+            rows.append(row)
 
-df = pd.DataFrame(rows)
+    df = pd.DataFrame(rows[1:], columns=rows[0])
+    return df
 
 # , columns=[
     # 'root', 'subkey', 'count', 'subsubkey', 'subsubkey_count',
     # 'subsubsubkey', 'subsubsubkey_count', 'subsubsubsubkey', 'subsubsubsubkey_count'
 # ]
+df = read_csv(file_path)
+print(df.head())
 
-print(df)
+# df.groupby(['subkey']).agg('count')
+df_groups = df.groupby('subkey').size().reset_index().sort_values(by=0, ascending=False)
+print(df_groups)
+print(df_groups.to_csv('subkey_groups.csv', index=True))
+
 
 # %%
