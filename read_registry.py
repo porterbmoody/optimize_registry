@@ -6,17 +6,8 @@ import socket
 import matplotlib as plt
 import matplotlib.style
 import pandas as pd
-# import logging
 
 matplotlib.style.use('dark_background')
-
-# logging.basicConfig(
-	# filename="registry_scan.log",
-	# level=logging.INFO,
-	# format="%(asctime)s | %(levelname)s | %(message)s"
-# )
-
-# logger = logging.getLogger(__name__)
 
 class Registry:
 
@@ -26,11 +17,10 @@ class Registry:
             'computer': socket.gethostname(),
         }
         self.open_hives()
-        self.layer1()
-        self.log_file = open("registry_scan1.log", "w", encoding="utf-8")
-        self.log_file.write("root,subkey,count\n")
-        self.layer2()
-        print(self.first_layer)
+        # self.layer1()
+        # self.layer2()
+        self.layer3()
+        # print(self.first_layer)
 
     @staticmethod
     def get_subkeys(hive_handle):
@@ -62,10 +52,8 @@ class Registry:
     def query_subkeys(hive_handle):
         try:
             num_subkeys, num_values, last_modified = winreg.QueryInfoKey(hive_handle)
-            print(winreg.QueryInfoKey(hive_handle))
             return num_subkeys
         except Exception as e:
-            print(f"Error querying key info: {e}")
             return 0
 
     def open_hives(self):
@@ -103,6 +91,8 @@ class Registry:
         self.first_layer.plot(x='hive', y='subkey_count', kind='bar', title='subkey counts', xlabel='hive',ylabel='count')
 
     def layer2(self):
+        self.log_file = open("registry_scan1.log", "w", encoding="utf-8")
+        self.log_file.write("root,subkey,count\n")
         for hive_name, hive in self.hives:
             # self.log_file.write(f"HIVE: {hive_name}")
             number_of_subkeys = self.count_subkeys(hive)
@@ -113,9 +103,32 @@ class Registry:
                     second_level_count = self.count_subkeys(subkey)
                     self.log_file.write(f"{hive_name},{subkey_name},{second_level_count}\n")
                 except PermissionError:
-                    print(f"{key_number} | Permission denied")
+                    self.log_file.write(f"{key_number},Permission denied\n")
                 except Exception as e:
-                    print(f"{key_number} | Error: {e}")
+                    self.log_file.write(f"{key_number},Permission denied\n")
+
+    def layer3(self):
+        self.log_file = open("registry_scan2.log", "w", encoding="utf-8")
+        self.log_file.write("root,subkey,count,subsubkey\n")
+        print(self.hives)
+        for hive_number, hive in enumerate(self.hives[2:6]):
+            number_of_subkeys = self.count_subkeys(hive[1])
+            print(hive)
+            for key_number in range(number_of_subkeys):
+                try:
+                    subkey_name = winreg.EnumKey(hive[1], key_number)
+                    subkey = winreg.OpenKey(hive[1], subkey_name)
+                    subkey_count = self.count_subkeys(subkey)
+                    for subkey_number in range(subkey_count):
+                        subsubkey_name = winreg.EnumKey(hive[1], subkey_number)
+                        subsubkey = winreg.OpenKey(hive[1], subsubkey_name)
+                        self.log_file.write(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name}\n")
+                except PermissionError:
+                    self.log_file.write(f"{key_number},Permission denied\n")
+                except Exception as e:
+                    self.log_file.write(f"{key_number},{e}\n")
+                # for key_number in range(number_of_subkeys):
+                    # number_of_subsubkeys = self.count_subkeys(subkey)
 
     def close_hives(self):
         for hkey_name, hive in self.hives:
@@ -144,4 +157,4 @@ key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, "Software")
 
 winreg.QueryInfoKey(key)
 
-git add .;git commit -m 'changes';git pull;git push;
+# git add .;git commit -m 'changes';git pull;git push;
