@@ -114,8 +114,7 @@ class Registry:
                     self.log_file.write(f"{key_number},Permission denied\n")
 
     def layer3(self):
-        print(self.hives[2:5])
-        for hive_number, hive in enumerate(self.hives[3:5]):
+        for hive_number, hive in enumerate(self.hives):
             number_of_subkeys = self.count_subkeys(hive[1])
             print(f'''hive=={hive[0]}\nnumber_of_subkeys=={number_of_subkeys}''')
             for key_number in range(number_of_subkeys):
