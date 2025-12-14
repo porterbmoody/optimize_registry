@@ -16,7 +16,7 @@ class Registry:
             'hkeys': [name for name in dir(winreg) if name.startswith('HKEY_')],
             'computer': socket.gethostname(),
         }
-        self.log_path = 'logs/registry_scan4.log'
+        self.log_path = 'logs/registry_scan5.log'
         self.log_file = open(self.log_path, "w", encoding="utf-8")
         self.log_file.write("root,subkey,count,subsubkey,subsubkey_count,subsubsubkey\n")
         # self.log_file = open("registry_scan1.log", "w", encoding="utf-8")
@@ -114,7 +114,7 @@ class Registry:
                     self.log_file.write(f"{key_number},Permission denied\n")
 
     def layer3(self):
-        for hive_number, hive in enumerate(self.hives):
+        for hive in self.hives:
             number_of_subkeys = self.count_subkeys(hive[1])
             print(f'''hive=={hive[0]}\nnumber_of_subkeys=={number_of_subkeys}''')
             for key_number in range(number_of_subkeys):
@@ -127,14 +127,14 @@ class Registry:
                             subsubkey_name = winreg.EnumKey(subkey, subkey_number)
                             subsubkey = winreg.OpenKey(subkey, subsubkey_name)
                             subsubkey_count = self.count_subkeys(subsubkey)
-                            # print(f"""writing...{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}""")
-                            self.log_file.write(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}\n")
+                            print(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}")
+                            # self.log_file.write(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}\n")
                             for subsubkey_number in range(subsubkey_count):
                                 subsubsubkey_name = winreg.EnumKey(subsubkey, subsubkey_number)
                                 subsubsubkey = winreg.OpenKey(subsubkey, subsubsubkey_name)
                                 subsubsubkey_count = self.count_subkeys(subsubsubkey)
-                                print(f"""subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}""")
-                                self.log_file.write(f"""subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}\n""")
+                                # print(f"""{hive[0]} subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}""")
+                                self.log_file.write(f"""{hive[0]},{subkey_name},{subsubkey_name},{subsubsubkey_name},{subsubsubkey_count}\n""")
                         except Exception as error:
                             self.log_file.write(f"hive=={hive[0]} error=={error}\n")
                 except Exception as error:
