@@ -112,7 +112,7 @@ class Registry:
         self.log_file = open(self.log_path, "w", encoding="utf-8")
         self.log_file.write("root,subkey,count,subsubkey,subsubkey_count\n")
         print(self.hives[2:5])
-        for hive_number, hive in enumerate(self.hives[2:5]):
+        for hive_number, hive in enumerate(self.hives):
             number_of_subkeys = self.count_subkeys(hive[1])
             print(hive)
             for key_number in range(number_of_subkeys):
