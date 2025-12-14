@@ -22,7 +22,7 @@ class Registry:
         # self.log_file = open("registry_scan1.log", "w", encoding="utf-8")
         # self.log_file.write("root,subkey,count\n")
         self.open_hives()
-        # self.layer1()
+        self.layer1()
         # self.layer2()
         self.layer3()
         # print(self.first_layer)
@@ -60,10 +60,12 @@ class Registry:
             return num_subkeys
         except Exception as e:
             return 0
-        
+
     def visualize(self):
         self.first_layer = pd.DataFrame(self.results)
-        self.first_layer.plot(x='hive', y='subkey_count', kind='bar', title='subkey counts', xlabel='hive',ylabel='count')
+        ax = self.first_layer.plot(x='hive', y='subkey_count', kind='bar', title='subkey counts', xlabel='hive',ylabel='count', figsize=(10, 6))
+        fig = ax.get_figure()
+        fig.savefig("subkey_counts.png")
 
     def open_hives(self):
         self.hives = []
@@ -171,3 +173,12 @@ print(winreg.OpenKey(key, 'Ableton'))
 print(key)
 
 # git add .;git commit -m 'changes';git pull;git push;
+
+#%%
+
+
+import matplotlib.pyplot as plt
+
+plt.plot([1, 2, 3], [4, 5, 6])
+plt.savefig("my_plot.png")
+plt.show()
