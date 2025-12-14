@@ -18,7 +18,7 @@ class Registry:
         }
         self.log_path = 'logs/registry_scan4.log'
         self.log_file = open(self.log_path, "w", encoding="utf-8")
-        self.log_file.write("root,subkey,count,subsubkey,subsubkey_count\n")
+        self.log_file.write("root,subkey,count,subsubkey,subsubkey_count,subsubsubkey\n")
         # self.log_file = open("registry_scan1.log", "w", encoding="utf-8")
         # self.log_file.write("root,subkey,count\n")
         self.open_hives()
@@ -127,21 +127,18 @@ class Registry:
                             subsubkey_name = winreg.EnumKey(subkey, subkey_number)
                             subsubkey = winreg.OpenKey(subkey, subsubkey_name)
                             subsubkey_count = self.count_subkeys(subsubkey)
-                            print(f"""writing...{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}""")
+                            # print(f"""writing...{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}""")
                             self.log_file.write(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}\n")
+                            for subsubkey_number in range(subsubkey_count):
+                                subsubsubkey_name = winreg.EnumKey(subsubkey, subsubkey_number)
+                                subsubsubkey = winreg.OpenKey(subsubkey, subsubsubkey_name)
+                                subsubsubkey_count = self.count_subkeys(subsubsubkey)
+                                print(f"""subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}""")
+                                self.log_file.write(f"""subkey_name=={subkey_name} subsubkey_name=={subsubkey_name} subsubsubkey_name=={subsubsubkey_name} subsubsubkey_count=={subsubsubkey_count}\n""")
                         except Exception as error:
-                            # self.log_file.write(f"""{error}""")
-                            self.log_file.write(f"{hive[0]} {error}\n")
+                            self.log_file.write(f"hive=={hive[0]} error=={error}\n")
                 except Exception as error:
-                    self.log_file.write(f"""{error}""")
-        self.log_file.write('end')
-
-                # except PermissionError:
-                    # self.log_file.write(f"{key_number},Permission denied\n")
-                # except Exception as e:
-                    # self.log_file.write(f"{key_number},{e}\n")
-                # for key_number in range(number_of_subkeys):
-                    # number_of_subsubkeys = self.count_subkeys(subkey)
+                    self.log_file.write(f"""key_number=={key_number} error=={error}\n""")
 
     def close_hives(self):
         for hkey_name, hive in self.hives:
