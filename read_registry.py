@@ -16,6 +16,7 @@ class Registry:
             'hkeys': [name for name in dir(winreg) if name.startswith('HKEY_')],
             'computer': socket.gethostname(),
         }
+        self.log_path = 'logs/registry_scan3.log'
         self.open_hives()
         # self.layer1()
         # self.layer2()
@@ -108,10 +109,10 @@ class Registry:
                     self.log_file.write(f"{key_number},Permission denied\n")
 
     def layer3(self):
-        self.log_file = open("registry_scan2.log", "w", encoding="utf-8")
-        self.log_file.write("root,subkey,count,subsubkey\n")
-        print(self.hives)
-        for hive_number, hive in enumerate(self.hives[2:6]):
+        self.log_file = open(self.log_path, "w", encoding="utf-8")
+        self.log_file.write("root,subkey,count,subsubkey,subsubkey_count\n")
+        print(self.hives[2:5])
+        for hive_number, hive in enumerate(self.hives[2:5]):
             number_of_subkeys = self.count_subkeys(hive[1])
             print(hive)
             for key_number in range(number_of_subkeys):
@@ -122,7 +123,9 @@ class Registry:
                     for subkey_number in range(subkey_count):
                         subsubkey_name = winreg.EnumKey(hive[1], subkey_number)
                         subsubkey = winreg.OpenKey(hive[1], subsubkey_name)
-                        self.log_file.write(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name}\n")
+                        subsubkey_count = self.count_subkeys(subsubkey)
+                        print(f"""writing...{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}\n""")
+                        self.log_file.write(f"{hive[0]},{subkey_name},{subkey_number},{subsubkey_name},{subsubkey_count}\n")
                 except PermissionError:
                     self.log_file.write(f"{key_number},Permission denied\n")
                 except Exception as e:
