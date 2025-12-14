@@ -1,6 +1,9 @@
 import pandas as pd
 import csv
+import matplotlib
+import matplotlib.style
 
+matplotlib.style.use('dark_background')
 
 # file = '''logs/registry_scan6.log'''
 # with open(file, newline='', encoding='utf-8') as csvfile:
@@ -28,30 +31,38 @@ import pandas as pd
 
 file_path = 'logs/registry_scan6.log'
 rows = []
-max_lines = 10000
+max_lines = 100000
 
-def read_csv(file_path):
+def load_data(file_path, group_columns):
     with open(file_path, 'r', encoding='utf-8') as f:
         for i, line in enumerate(f):
-            if i >= max_lines:
-                break
+            # if i >= max_lines:
+                # break
             row = line.strip().split('||')
             rows.append(row)
-
     df = pd.DataFrame(rows[1:], columns=rows[0])
+    # df = df[df['root'] == 'HKEY_LOCAL_MACHINE']
+    df = df.groupby(group_columns).size().reset_index().sort_values(by=0, ascending=False)
+    print(df)
+    df.columns = ['root', 'subkey', 'subsubkey', 'count']
+    df.to_csv('data/subkey_groups.csv', index=False)
     return df
 
-# , columns=[
-    # 'root', 'subkey', 'count', 'subsubkey', 'subsubkey_count',
-    # 'subsubsubkey', 'subsubsubkey_count', 'subsubsubsubkey', 'subsubsubsubkey_count'
-# ]
-df = read_csv(file_path)
-print(df.head())
+def visualize(df):
+    count_min = 5
+    print(f"""rows=={len(df)}""")
+    df = df[df['count'] > count_min]
+    print(f"""rows=={len(df)}""")
+    ax = df.plot(x='subsubkey', y='count', kind='bar', title=f'distribution of HKEY_CLASSES_ROOT subkeys (count > {count_min})', xlabel='hive',ylabel='count', figsize=(20, 12))
+    fig = ax.get_figure()
+    fig.savefig("subkey_groups.png")
 
-# df.groupby(['subkey']).agg('count')
-df_groups = df.groupby('subkey').size().reset_index().sort_values(by=0, ascending=False)
-print(df_groups)
-print(df_groups.to_csv('subkey_groups.csv', index=True))
+group_columns = ['root', 'subkey', 'subsubkey']
+df = load_data(file_path, group_columns)
+visualize(df)
+# print(df.head())
 
 
 # %%
+# self.first_layer = pd.DataFrame(self.results)
+
