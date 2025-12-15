@@ -52,7 +52,6 @@ void log_subkeys_recursive(FILE* log_file, HKEY parent_key, const std::string& p
     RegCloseKey(hkey);
 }
 
-
 int main() {
     const char* headers = "root,subkey,subsubkey,subsubsubkey\n";
     const char* log_path = "logs/log.txt";
