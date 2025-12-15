@@ -29,29 +29,32 @@ void print(const T& value) {
     std::cout << value << std::endl;
 }
 
-void log_subkeys(FILE* log_file, HKEY root_key, const char* root_name) {
+void log_subkeys_recursive(FILE* log_file, HKEY parent_key, const std::string& path, int depth, int max_depth) {
+    if (depth > max_depth) return;
     char subkey_name[256];
-    char subsubkey_name[256];
-    HKEY hkey, subkey;
-
-    if (RegOpenKeyEx(root_key, "", 0, KEY_READ, &hkey) == ERROR_SUCCESS) {
-        for (DWORD index = 0; RegEnumKey(hkey, index, subkey_name, sizeof(subkey_name)) == ERROR_SUCCESS; index++) {
-            // std::cout << root_name << " " << subkey_name << std::endl;
-            // fprintf(log_file, "%s,%s\n", root_name, subkey_name);
-            if (RegOpenKeyEx(hkey, subkey_name, 0, KEY_READ, &subkey) == ERROR_SUCCESS) {
-                for (DWORD sub_index = 0; RegEnumKey(subkey, sub_index, subsubkey_name, sizeof(subsubkey_name)) == ERROR_SUCCESS; sub_index++) {
-                    std::cout << root_name << "," << subkey_name << "," << subsubkey_name << std::endl;
-                    fprintf(log_file, "%s,%s,%s\n", root_name, subkey_name, subsubkey_name);
-                }
-                RegCloseKey(subkey);
-            }
-        }
-        RegCloseKey(hkey);
+    HKEY hkey;
+    if (RegOpenKeyEx(parent_key, "", 0, KEY_READ, &hkey) != ERROR_SUCCESS) {
+        return;
     }
+    bool has_subkeys = false;
+    for (DWORD index = 0; RegEnumKey(hkey, index, subkey_name, sizeof(subkey_name)) == ERROR_SUCCESS; index++) {
+        has_subkeys = true;
+        std::string full_path = path + "\\" + subkey_name;
+        HKEY subkey;
+        if (RegOpenKeyEx(hkey, subkey_name, 0, KEY_READ, &subkey) == ERROR_SUCCESS) {
+            log_subkeys_recursive(log_file, subkey, full_path, depth + 1, max_depth);
+            RegCloseKey(subkey);
+        }
+    }
+    if (!has_subkeys || depth == max_depth) {
+        fprintf(log_file, "%s\n", path.c_str());
+    }
+    RegCloseKey(hkey);
 }
 
+
 int main() {
-    const char* headers = "root,subkey,subsubkey\n";
+    const char* headers = "root,subkey,subsubkey,subsubsubkey\n";
     const char* log_path = "logs/log.txt";
     FILE* log_file = fopen(log_path, "w");
     if (!log_file) {
@@ -61,7 +64,8 @@ int main() {
     fprintf(log_file, headers);
     auto start = std::chrono::high_resolution_clock::now();
     for (const auto& root : roots) {
-        log_subkeys(log_file, root.handle, root.name);
+        print(root.name);
+        log_subkeys_recursive(log_file, root.handle, root.name, 0, 4);
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
