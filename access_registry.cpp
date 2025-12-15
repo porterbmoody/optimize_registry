@@ -4,6 +4,7 @@
 #include <fstream>
 #include <cstdio>
 #include <vector>
+#include <chrono>
 
 struct RootKey {
     HKEY handle;
@@ -30,30 +31,43 @@ void print(const T& value) {
 
 void log_subkeys(FILE* log_file, HKEY root_key, const char* root_name) {
     char subkey_name[256];
-    HKEY hkey;
+    char subsubkey_name[256];
+    HKEY hkey, subkey;
+
     if (RegOpenKeyEx(root_key, "", 0, KEY_READ, &hkey) == ERROR_SUCCESS) {
         for (DWORD index = 0; RegEnumKey(hkey, index, subkey_name, sizeof(subkey_name)) == ERROR_SUCCESS; index++) {
-            std::cout << root_name << " " << subkey_name << std::endl;
-            fprintf(log_file, "%s,%s\n", root_name, subkey_name);
+            // std::cout << root_name << " " << subkey_name << std::endl;
+            // fprintf(log_file, "%s,%s\n", root_name, subkey_name);
+            if (RegOpenKeyEx(hkey, subkey_name, 0, KEY_READ, &subkey) == ERROR_SUCCESS) {
+                for (DWORD sub_index = 0; RegEnumKey(subkey, sub_index, subsubkey_name, sizeof(subsubkey_name)) == ERROR_SUCCESS; sub_index++) {
+                    std::cout << root_name << "," << subkey_name << "," << subsubkey_name << std::endl;
+                    fprintf(log_file, "%s,%s,%s\n", root_name, subkey_name, subsubkey_name);
+                }
+                RegCloseKey(subkey);
+            }
         }
         RegCloseKey(hkey);
     }
 }
 
 int main() {
-    DWORD dataSize = 1024;
-    const char* subkey = "Software\\MyApp";
-    const char* valueName = "Version";
-    const char* headers = "root,subkey,subkey_count\n";
+    const char* headers = "root,subkey,subsubkey\n";
     const char* log_path = "logs/log.txt";
     FILE* log_file = fopen(log_path, "w");
-    if (!log_file) return 1;
+    if (!log_file) {
+        std::cerr << "Failed to open log file" << std::endl;
+        return 1;
+    }
     fprintf(log_file, headers);
+    auto start = std::chrono::high_resolution_clock::now();
     for (const auto& root : roots) {
         log_subkeys(log_file, root.handle, root.name);
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    std::cout << "\n\nRuntime: " << duration.count() << " seconds" << std::endl;
     fclose(log_file);
-	return 0;
+    return 0;
 }
 
 // g++ access_registry.cpp -o access_registry.exe
