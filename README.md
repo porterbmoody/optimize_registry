@@ -1,2 +1,0 @@
-# optimize_registry
-
