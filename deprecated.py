@@ -315,3 +315,45 @@ def walk(key, path=""):
 
 walk(key)
 
+// fprintf(log_file, "%llu\n", (unsigned long long)hkey);
+
+// void log_subkeys_recursive(FILE* log_file, HKEY hkey, const std::string& path, int depth, int max_depth) {
+// void log_subkeys_recursive(FILE* log_file, HKEY hkey, int depth, int max_depth) {
+    // if (depth > max_depth) return;
+    // char subkey_name[256];
+    // HKEY hkey;
+    // bool has_subkeys = false;
+    // for (DWORD index = 0; RegEnumKey(hkey, index, name, sizeof(subkey_name)) == ERROR_SUCCESS; index++) {
+    //     has_subkeys = true;
+    //     std::string full_path = path + "\\" + subkey_name;
+    //     HKEY subkey;
+    //     if (RegOpenKeyEx(hkey, subkey_name, 0, KEY_READ, &subkey) == ERROR_SUCCESS) {
+    //         log_subkeys_recursive(log_file, subkey, full_path, depth + 1, max_depth);
+    //         log_subkeys_recursive(log_file, subkey, depth + 1, max_depth);
+    //         RegCloseKey(subkey);
+        // }
+    // }
+    // std::cout << hkey << std::endl;
+    // if (!has_subkeys || depth == max_depth) {
+    //     fprintf(log_file, "%s\n", path.c_str());
+    // }
+    // RegCloseKey(hkey);
+// }
+
+// struct RootKey {
+//     HKEY handle;
+//     const char* name;
+// };
+
+// RootKey roots[] = {
+//     {HKEY_CLASSES_ROOT, "HKEY_CLASSES_ROOT"},
+//     {HKEY_CURRENT_USER, "HKEY_CURRENT_USER"},
+//     {HKEY_LOCAL_MACHINE, "HKEY_LOCAL_MACHINE"},
+//     {HKEY_USERS, "HKEY_USERS"},
+//     {HKEY_PERFORMANCE_DATA, "HKEY_PERFORMANCE_DATA"},
+//     {HKEY_PERFORMANCE_TEXT, "HKEY_PERFORMANCE_TEXT"},
+//     {HKEY_PERFORMANCE_NLSTEXT, "HKEY_PERFORMANCE_NLSTEXT"},
+//     {HKEY_CURRENT_CONFIG, "HKEY_CURRENT_CONFIG"},
+//     {HKEY_DYN_DATA, "HKEY_DYN_DATA"},
+//     {HKEY_CURRENT_USER_LOCAL_SETTINGS, "HKEY_CURRENT_USER_LOCAL_SETTINGS"},
+// };
