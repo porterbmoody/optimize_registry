@@ -1,0 +1,76 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build and Run C++",
+            "type": "shell",
+            "command": "C:/msys64/mingw64/bin/c++.exe log_registry.cpp -o log_registry.exe ; .\\log_registry.exe",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always"
+            }
+        }
+    ]
+}
+
+// {"program": "${workspaceFolder}\\run_registry.bat"}
+
+
+// {
+// 	"version": "2.0.0",
+// 	"tasks": [
+// 		{
+// 			"label": "Compile and Run C++",
+// 			"type": "shell",
+// 			"command": "g++ main.cpp -o main.exe && main.exe",
+// 			"group": {
+// 				"kind": "build",
+// 				"isDefault": true
+// 			},
+// 			"problemMatcher": []
+// 		}
+// 	]
+// }
+
+
+// {
+//     "label": "Compile and Run C++",
+//     "type": "shell",
+//     "command": "g++ log_registry.cpp -o log_registry.exe && log_registry.exe",
+//     "group": {
+//         "kind": "build",
+//         "isDefault": true
+//     },
+//     "problemMatcher": [],
+//     "configurations": [
+//         {
+//             "name": "(g++) Launch",
+//             "type": "cppdbg",
+//             "request": "launch",
+//             "program": "${workspaceFolder}/log_registry.exe",
+//             "args": [],
+//             "stopAtEntry": false,
+//             "cwd": "${fileDirname}",
+//             "environment": [],
+//             "externalConsole": false,
+//             "MIMode": "gdb",
+//             "miDebuggerPath": "/path/to/gdb",
+//             "setupCommands": [
+//                 {
+//                     "description": "Enable pretty-printing for gdb",
+//                     "text": "-enable-pretty-printing",
+//                     "ignoreFailures": true
+//                 },
+//                 {
+//                     "description": "Set Disassembly Flavor to Intel",
+//                     "text": "-gdb-set disassembly-flavor intel",
+//                     "ignoreFailures": true
+//                 }
+//             ]
+//         }
+//     ],
+//     "version": "2.0.0"
+// }

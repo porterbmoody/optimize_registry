@@ -1,0 +1,12 @@
+{
+    "workbench.colorTheme": "Tomorrow Night Blue",
+    "workbench.iconTheme": "ayu",
+    "workbench.preferredDarkColorTheme": "Solarized Dark",
+    "workbench.preferredLightColorTheme": "Solarized Dark",
+    "jupyter.themeMatplotlibPlots": true,
+    "C_Cpp.default.compileCommands": [
+
+        ""
+    ],
+    "C_Cpp.default.compilerPath": "C:/msys64/mingw64/bin/c++.exe"
+}

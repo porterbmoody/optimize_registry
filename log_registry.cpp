@@ -25,8 +25,7 @@ std::vector<HKEY> get_hkeys() {
             std::string hex_key = match[2].str();
             ULONG_PTR key_num;
             std::stringstream ss;
-            ss << std::hex << hex_key;
-            ss >> key_num;
+            key_num = std::stoul(hex_key, nullptr, 16);
             HKEY hkey = (HKEY)key_num;
             hkeys.push_back(hkey);
             // std::cout << hkey << std::endl;
@@ -50,7 +49,7 @@ void log_subkeys_recursive(FILE* log_file, HKEY hkey, std::string path, int dept
         std::string full_path = path + "\\" + name;
 
         if (RegOpenKeyEx(hkey, name, 0, KEY_READ, &subkey) == ERROR_SUCCESS) {
-            std::cout << full_path << "," <<subkey << std::endl;
+            // std::cout << full_path << "," << subkey << std::endl;
             // std::cout << subkey << std::endl;
             log_subkeys_recursive(log_file, subkey, full_path, depth + 1, max_depth);
             RegCloseKey(subkey);
@@ -71,7 +70,7 @@ std::string hkey_to_string(HKEY hkey) {
 
 int main() {
     const char* headers = "root,subkey,subsubkey,subsubsubkey\n";
-    const char* log_path = "logs/log2txt";
+    const char* log_path = "logs/log2.txt";
     FILE* log_file = fopen(log_path, "w");
     if (!log_file) {
         std::cerr << "Failed to open log file" << std::endl;
@@ -84,7 +83,8 @@ int main() {
     // std::string empty_str;
     // print(hkey);
     for (const auto& hkey : hkeys) {
-        std::string path = hkey_to_string(hkey);  // use the handle as the starting path
+        std::string path = hkey_to_string(hkey);
+        std::cout << path << std::endl;
         log_subkeys_recursive(log_file, hkey, path, 0, 1);
     }
     auto end = std::chrono::high_resolution_clock::now();

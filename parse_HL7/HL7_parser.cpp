@@ -5,6 +5,20 @@
 #include <fstream>
 #include <map>
 
+// Currently you handle: MSH, PID, NK1, PV1
+// Add these (most common):
+// - OBR (Orders)
+// - OBX (Observations/Results) 
+// - DG1 (Diagnosis)
+// - PR1 (Procedures)
+// - IN1 (Insurance)
+// - AL1 (Allergies)
+// - RXA (Medications)
+
+// v2.3, v2.4, v2.5, v2.6, v2.7, v2.8
+// They're slightly different
+// parser must handle all versions
+
 // HL7 Parser - Parses HL7 v2.x messages
 class HL7Parser {
 private:
