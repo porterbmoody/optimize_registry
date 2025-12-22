@@ -1,11 +1,7 @@
-@echo off
-C:/msys64/mingw64/bin/g++.exe text_editor.cpp -o text_editor.exe -mwindows -lgdi32 -lcomdlg32
-
-if %ERRORLEVEL% NEQ 0 (
-    echo Compilation failed!
-    pause
-    exit /b 1
-)
-
-echo Compilation successful!
+@echo on
+echo compiling text_editor.cpp
+windres resources.rc resources.o
+C:\msys64\mingw64\bin\c++.exe text_editor.cpp resources.o -o text_editor.exe -mwindows -lgdi32 -lcomdlg32
 text_editor.exe
+
+echo running text_editor.exe

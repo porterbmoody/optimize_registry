@@ -7,9 +7,10 @@
 #include <chrono>
 #include <regex>
 #include <string>
+#include <sstream>
 
 std::vector<HKEY> get_hkeys() {
-    std::cout << "C:/msys64/mingw64/include/winreg.h" << std::endl;
+    // std::cout << "C:/msys64/mingw64/include/winreg.h" << std::endl;
     std::ifstream file("C:/msys64/mingw64/include/winreg.h");
     if (!file) {
         std::cerr << "Failed to open winreg.h\n";
@@ -28,7 +29,6 @@ std::vector<HKEY> get_hkeys() {
             key_num = std::stoul(hex_key, nullptr, 16);
             HKEY hkey = (HKEY)key_num;
             hkeys.push_back(hkey);
-            // std::cout << hkey << std::endl;
         }
     }
     return hkeys;
@@ -60,8 +60,6 @@ void log_subkeys_recursive(FILE* log_file, HKEY hkey, std::string path, int dept
     }
 }
 
-#include <sstream>
-
 std::string hkey_to_string(HKEY hkey) {
     std::ostringstream oss;
     oss << "0x" << std::hex << reinterpret_cast<ULONG_PTR>(hkey);
@@ -71,6 +69,7 @@ std::string hkey_to_string(HKEY hkey) {
 int main() {
     const char* headers = "root,subkey,subsubkey,subsubsubkey\n";
     const char* log_path = "logs/log2.txt";
+    std::cout << log_path << std::endl;
     FILE* log_file = fopen(log_path, "w");
     if (!log_file) {
         std::cerr << "Failed to open log file" << std::endl;
@@ -85,7 +84,7 @@ int main() {
     for (const auto& hkey : hkeys) {
         std::string path = hkey_to_string(hkey);
         std::cout << path << std::endl;
-        log_subkeys_recursive(log_file, hkey, path, 0, 1);
+        log_subkeys_recursive(log_file, hkey, path, 0, 2);
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
