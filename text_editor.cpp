@@ -13,11 +13,18 @@
 #include <iostream>
 #include <windows.h>
 #include <cstdlib>
+#include <FreeImage.h>
 
 HWND hEdit;
 HWND hButton;
 HBRUSH hBackgroundBrush;
 HBRUSH hEditBrush;
+
+FreeImage_Initialise();
+FIBITMAP* png = FreeImage_Load(FIF_PNG, "image.png", PNG_DEFAULT);
+FreeImage_Save(FIF_ICO, png, "icon.ico", 0);
+FreeImage_Unload(png);
+FreeImage_DeInitialise();
 
 void on_file(HWND)  { std::cout << "file\n"; }
 void on_edit(HWND)  { std::cout << "edit\n"; }
