@@ -59,6 +59,7 @@ void on_save(HWND)
 {
     int length = GetWindowTextLengthA(hEdit);
     std::string code(length, '\0');
+    std::cout << "length: " << length << std::endl;
     GetWindowTextA(hEdit, code.data(), length + 1);
     std::string normalized;
     normalized.reserve(code.size());
@@ -75,7 +76,7 @@ void on_save(HWND)
             normalized.push_back(code[i]);
         }
     }
-    write_text_file("new_file.cpp", normalized);
+    write_text_file("new_file1.cpp", normalized);
 }
 void on_theme(HWND) { std::cout << "theme\n"; }
 void on_terminal(HWND hWnd) {
@@ -85,12 +86,12 @@ void on_terminal(HWND hWnd) {
 void on_run(HWND hWnd)
 {
     on_save(hWnd);
-    int compileResult = system("C:/msys64/mingw64/bin/c++.exe new_file.cpp -o new_file.exe -std=c++17 -Wall");
+    int compileResult = system("C:/msys64/mingw64/bin/c++.exe new_file1.cpp -o new_file1.exe -std=c++17 -Wall");
     if (compileResult != 0) {
         std::cerr << "Compilation failed!" << std::endl;
         return;
     }
-    int runResult = system("new_file.exe");
+    int runResult = system("new_file1.exe");
     std::cout << "Program exited with code: " << runResult << std::endl;
 }
 void on_git_push(HWND)  
@@ -126,27 +127,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_CREATE:
             hBackgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
             hEditBrush = CreateSolidBrush(RGB(20, 20, 20));
-            // hEdit = CreateWindowEx(0, "EDIT", NULL,
-            //                        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
-            //                        0, 0, 0, 0,
-            //                        hWnd, (HMENU)1, GetModuleHandle(NULL), NULL);
+            hEdit = CreateWindowEx(0, "EDIT", NULL,
+                                   WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+                                   0, 0, 0, 0,
+                                   hWnd, (HMENU)1, GetModuleHandle(NULL), NULL);
             break;
         case WM_SIZE:
         {
-            int width  = LOWORD(lParam);
-            int height = HIWORD(lParam);
-
+            RECT rc;
+            GetClientRect(hWnd, &rc);
             int toolbarHeight = 40;
-            int terminalHeight = height / 3;
-            int editHeight = height - toolbarHeight - terminalHeight;
-
-            // MoveWindow(hEdit, 0, toolbarHeight, width, editHeight+50, TRUE);
-
-            if (hConsoleChild)
-                MoveWindow(hConsoleChild, 0, toolbarHeight + editHeight, width, terminalHeight, TRUE);
+            int terminalHeight = rc.bottom / 3;
+            int editHeight = rc.bottom - toolbarHeight - terminalHeight;
+            MoveWindow(hEdit, 0, toolbarHeight, rc.right, editHeight, TRUE);
         }
         break;
-
         case WM_CTLCOLOREDIT:
         {
             HDC hdc = (HDC)wParam;
@@ -209,53 +204,53 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Roboto");
-    // HMENU h_menu = CreateMenu();
-    // AppendMenu(h_menu, MF_STRING, idm_file, "file");
-    // AppendMenu(h_menu, MF_STRING, idm_edit, "edit");
-    // AppendMenu(h_menu, MF_STRING, idm_theme, "theme");
-    // AppendMenu(h_menu, MF_STRING, idm_save, "save");
-    // AppendMenu(h_menu, MF_STRING, idm_directory, "directory");
-    // AppendMenu(h_menu, MF_STRING, idm_run, "run");
-    // AppendMenu(h_menu, MF_STRING, idm_terminal, "terminal");
-    // AppendMenu(h_menu, MF_STRING, idm_git_push, "git_push");
-    // AppendMenu(h_menu, MF_STRING, idm_exit, "exit");
-    // SetMenu(hWnd, h_menu);
-    HWND h_button_file = CreateWindowEx(0, "BUTTON", "file",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        10, 10, 80, 30, hWnd, (HMENU)idm_file, hInstance, NULL);
-    HWND h_button_edit = CreateWindowEx(0, "BUTTON", "edit",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        100, 10, 80, 30, hWnd, (HMENU)idm_edit, hInstance, NULL);
-    HWND h_button_theme = CreateWindowEx(0, "BUTTON", "theme",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        190, 10, 80, 30, hWnd, (HMENU)idm_theme, hInstance, NULL);
-    HWND h_button_save = CreateWindowEx(0, "BUTTON", "save",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        280, 10, 80, 30, hWnd, (HMENU)idm_save, hInstance, NULL);
-    HWND h_button_directory = CreateWindowEx(0, "BUTTON", "directory",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        370, 10, 80, 30, hWnd, (HMENU)idm_directory, hInstance, NULL);
-    HWND h_button_run = CreateWindowEx(0, "BUTTON", "run",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        460, 10, 80, 30, hWnd, (HMENU)idm_run, hInstance, NULL);
-    HWND h_button_terminal = CreateWindowEx(0, "BUTTON", "terminal",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        550, 10, 80, 30, hWnd, (HMENU)idm_terminal, hInstance, NULL);
-    HWND h_button_git_push = CreateWindowEx(0, "BUTTON", "git push",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        640, 10, 80, 30, hWnd, (HMENU)idm_git_push, hInstance, NULL);
-    HWND h_button_exit = CreateWindowEx(0, "BUTTON", "exit",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        730, 10, 80, 30, hWnd, (HMENU)idm_exit, hInstance, NULL);
-    SendMessage(h_button_file,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_edit,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_theme, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_save, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_directory, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_run, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_terminal, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_git_push, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_exit, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    HMENU h_menu = CreateMenu();
+    AppendMenu(h_menu, MF_STRING, idm_file, "file");
+    AppendMenu(h_menu, MF_STRING, idm_edit, "edit");
+    AppendMenu(h_menu, MF_STRING, idm_theme, "theme");
+    AppendMenu(h_menu, MF_STRING, idm_save, "save");
+    AppendMenu(h_menu, MF_STRING, idm_directory, "directory");
+    AppendMenu(h_menu, MF_STRING, idm_run, "run");
+    AppendMenu(h_menu, MF_STRING, idm_terminal, "terminal");
+    AppendMenu(h_menu, MF_STRING, idm_git_push, "git_push");
+    AppendMenu(h_menu, MF_STRING, idm_exit, "exit");
+    SetMenu(hWnd, h_menu);
+    // HWND h_button_file = CreateWindowEx(0, "BUTTON", "file",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     10, 10, 80, 30, hWnd, (HMENU)idm_file, hInstance, NULL);
+    // HWND h_button_edit = CreateWindowEx(0, "BUTTON", "edit",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     100, 10, 80, 30, hWnd, (HMENU)idm_edit, hInstance, NULL);
+    // HWND h_button_theme = CreateWindowEx(0, "BUTTON", "theme",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     190, 10, 80, 30, hWnd, (HMENU)idm_theme, hInstance, NULL);
+    // HWND h_button_save = CreateWindowEx(0, "BUTTON", "save",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     280, 10, 80, 30, hWnd, (HMENU)idm_save, hInstance, NULL);
+    // HWND h_button_directory = CreateWindowEx(0, "BUTTON", "directory",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     370, 10, 80, 30, hWnd, (HMENU)idm_directory, hInstance, NULL);
+    // HWND h_button_run = CreateWindowEx(0, "BUTTON", "run",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     460, 10, 80, 30, hWnd, (HMENU)idm_run, hInstance, NULL);
+    // HWND h_button_terminal = CreateWindowEx(0, "BUTTON", "terminal",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     550, 10, 80, 30, hWnd, (HMENU)idm_terminal, hInstance, NULL);
+    // HWND h_button_git_push = CreateWindowEx(0, "BUTTON", "git push",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     640, 10, 80, 30, hWnd, (HMENU)idm_git_push, hInstance, NULL);
+    // HWND h_button_exit = CreateWindowEx(0, "BUTTON", "exit",
+    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+    //     730, 10, 80, 30, hWnd, (HMENU)idm_exit, hInstance, NULL);
+    // SendMessage(h_button_file,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    // SendMessage(h_button_edit,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    // SendMessage(h_button_theme, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    // SendMessage(h_button_save, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    // SendMessage(h_button_directory, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    // SendMessage(h_button_run, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    // SendMessage(h_button_terminal, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    // SendMessage(h_button_git_push, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    // SendMessage(h_button_exit, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
