@@ -1,6 +1,3 @@
-// #define WIN32_LEAN_AND_MEAN
-// #define UNICODE
-// #define _UNICODE
 #define idm_exit 100
 #define idm_save 101
 #define idm_theme 102
@@ -8,7 +5,9 @@
 #define idm_file 104
 #define idm_run 105
 #define idm_directory 106
+#define IDI_APP_ICON 107
 
+#include "resource.h"
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -140,14 +139,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = hInstance;
-    wc.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON, 32, 32, LR_DEFAULTCOLOR);
-    wc.hIconSm = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR);
-
+    wc.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(107), IMAGE_ICON, 32, 32, LR_DEFAULTCOLOR);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wc.lpszMenuName = NULL;
     wc.lpszClassName = "TextEditorClass";
-    wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
     RegisterClassEx(&wc);
     HWND hWnd = CreateWindowEx(0, "TextEditorClass", "C++ Integrated Development Environment", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 1000, 600, NULL, NULL, hInstance, NULL);
