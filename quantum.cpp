@@ -23,6 +23,29 @@ HBRUSH hEditBrush;
 HWND hConsoleChild;
 HWND hTerminal;
 
+bool terminalVisible = true;
+
+void update_terminal_position(HWND parent)
+{
+    if (!hConsoleChild || !terminalVisible) return;
+
+    RECT rcClient;
+    GetClientRect(parent, &rcClient);
+
+    int terminalHeight = rcClient.bottom / 3; // bottom 1/3
+    int editorHeight = rcClient.bottom - terminalHeight;
+
+    // Editor resizes
+    MoveWindow(hEdit, 0, 40, rcClient.right, editorHeight - 40, TRUE);
+
+    // Terminal resizes
+    SetWindowPos(hConsoleChild, NULL,
+                 0, editorHeight,
+                 rcClient.right, terminalHeight,
+                 SWP_NOZORDER);
+}
+
+
 bool write_text_file(const char* path, const std::string& text)
 {
     std::ofstream file(path, std::ios::binary);
@@ -134,6 +157,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         case WM_SIZE:
         {
+            update_terminal_position(hWnd);
             RECT rc;
             GetClientRect(hWnd, &rc);
             int toolbarHeight = 40;
