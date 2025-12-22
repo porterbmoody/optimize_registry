@@ -23,22 +23,27 @@ HBRUSH hEditBrush;
 HWND hConsoleChild;
 HWND hTerminal;
 
+bool write_text_file(const char* path, const std::string& text)
+{
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open())
+        return false;
+
+    file.write(text.data(), text.size());
+    return true;
+}
+
 void initialize_terminal(HWND parent)
 {
     AllocConsole();
     FILE* fp;
     freopen_s(&fp, "CONOUT$", "w", stdout);
     freopen_s(&fp, "CONIN$", "r", stdin);
-
     hConsoleChild = GetConsoleWindow();
     SetParent(hConsoleChild, parent);
-
-    // Remove the title bar of console for cleaner embedding
     LONG style = GetWindowLong(hConsoleChild, GWL_STYLE);
     style &= ~(WS_CAPTION | WS_THICKFRAME);
     SetWindowLong(hConsoleChild, GWL_STYLE, style);
-
-    // Initial position
     RECT rcClient;
     GetClientRect(parent, &rcClient);
     SetWindowPos(hConsoleChild, NULL, 
@@ -52,15 +57,25 @@ void on_edit(HWND)  { std::cout << "edit\n"; }
 void on_directory(HWND)  { std::cout << "directory\n"; }
 void on_save(HWND)
 {
-    std::cout << "saving..." << std::endl; 
-    std::ofstream text_file;
     int length = GetWindowTextLengthA(hEdit);
     std::string code(length, '\0');
     GetWindowTextA(hEdit, code.data(), length + 1);
+    std::string normalized;
+    normalized.reserve(code.size());
     std::cout << "saving: " << code << std::endl;
-    text_file.open("new_file.cpp");
-    text_file << code;
-    text_file.close();
+    for (size_t i = 0; i < code.size(); ++i)
+    {
+        if (code[i] == '\r' && i + 1 < code.size() && code[i + 1] == '\n')
+        {
+            normalized.push_back('\n');
+            ++i;
+        }
+        else
+        {
+            normalized.push_back(code[i]);
+        }
+    }
+    write_text_file("new_file.cpp", normalized);
 }
 void on_theme(HWND) { std::cout << "theme\n"; }
 void on_terminal(HWND hWnd) {
@@ -103,19 +118,35 @@ struct CommandHandler
     };
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
+    int toolbarHeight = 40;
+    int terminalHeight = HIWORD(lParam) / 3;
+    int editHeight = HIWORD(lParam) - toolbarHeight - terminalHeight;
     switch (message) 
     {
         case WM_CREATE:
             hBackgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
             hEditBrush = CreateSolidBrush(RGB(20, 20, 20));
-            hEdit = CreateWindowEx(0, "EDIT", NULL,
-                                   WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
-                                   0, 0, 0, 0,
-                                   hWnd, (HMENU)1, GetModuleHandle(NULL), NULL);
+            // hEdit = CreateWindowEx(0, "EDIT", NULL,
+            //                        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+            //                        0, 0, 0, 0,
+            //                        hWnd, (HMENU)1, GetModuleHandle(NULL), NULL);
             break;
         case WM_SIZE:
-            MoveWindow(hEdit, 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
-            break;
+        {
+            int width  = LOWORD(lParam);
+            int height = HIWORD(lParam);
+
+            int toolbarHeight = 40;
+            int terminalHeight = height / 3;
+            int editHeight = height - toolbarHeight - terminalHeight;
+
+            // MoveWindow(hEdit, 0, toolbarHeight, width, editHeight+50, TRUE);
+
+            if (hConsoleChild)
+                MoveWindow(hConsoleChild, 0, toolbarHeight + editHeight, width, terminalHeight, TRUE);
+        }
+        break;
+
         case WM_CTLCOLOREDIT:
         {
             HDC hdc = (HDC)wParam;
@@ -166,7 +197,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.lpszMenuName = NULL;
     wc.lpszClassName = "TextEditorClass";
     RegisterClassEx(&wc);
-    HWND hWnd = CreateWindowEx(0, "TextEditorClass", "Quantum", WS_OVERLAPPEDWINDOW,
+    HWND hWnd = CreateWindowEx(0, "TextEditorClass", "C++ Integrated Development Environment", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 1000, 600, NULL, NULL, hInstance, NULL);
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
@@ -177,54 +208,54 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     HFONT hToolbarFont = CreateFont(
         18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Consolas");
-    HMENU h_menu = CreateMenu();
-    AppendMenu(h_menu, MF_STRING, idm_file, "file");
-    AppendMenu(h_menu, MF_STRING, idm_edit, "edit");
-    AppendMenu(h_menu, MF_STRING, idm_theme, "theme");
-    AppendMenu(h_menu, MF_STRING, idm_save, "save");
-    AppendMenu(h_menu, MF_STRING, idm_directory, "directory");
-    AppendMenu(h_menu, MF_STRING, idm_run, "run");
-    AppendMenu(h_menu, MF_STRING, idm_terminal, "terminal");
-    AppendMenu(h_menu, MF_STRING, idm_git_push, "git_push");
-    AppendMenu(h_menu, MF_STRING, idm_exit, "exit");
-    SetMenu(hWnd, h_menu);
-    // HWND h_button_file = CreateWindowEx(0, "BUTTON", "file",
-    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-    //     10, 10, 80, 30, hWnd, (HMENU)idm_file, hInstance, NULL);
-    // HWND h_button_edit = CreateWindowEx(0, "BUTTON", "edit",
-        // WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        // 100, 10, 80, 30, hWnd, (HMENU)idm_edit, hInstance, NULL);
-    // HWND h_button_theme = CreateWindowEx(0, "BUTTON", "theme",
-        // WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        // 190, 10, 80, 30, hWnd, (HMENU)idm_theme, hInstance, NULL);
-    // HWND h_button_save = CreateWindowEx(0, "BUTTON", "save",
-        // WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-    //     280, 10, 80, 30, hWnd, (HMENU)idm_save, hInstance, NULL);
-    // HWND h_button_directory = CreateWindowEx(0, "BUTTON", "directory",
-    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-    //     370, 10, 80, 30, hWnd, (HMENU)idm_directory, hInstance, NULL);
-    // HWND h_button_run = CreateWindowEx(0, "BUTTON", "run",
-    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-    //     460, 10, 80, 30, hWnd, (HMENU)idm_run, hInstance, NULL);
-    // HWND h_button_terminal = CreateWindowEx(0, "BUTTON", "terminal",
-    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-    //     550, 10, 80, 30, hWnd, (HMENU)idm_terminal, hInstance, NULL);
-    // HWND h_button_git_push = CreateWindowEx(0, "BUTTON", "git push",
-    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-    //     640, 10, 80, 30, hWnd, (HMENU)idm_git_push, hInstance, NULL);
-    // HWND h_button_exit = CreateWindowEx(0, "BUTTON", "exit",
-    //     WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        // 730, 10, 80, 30, hWnd, (HMENU)idm_exit, hInstance, NULL);
-    // SendMessage(h_button_file,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    // SendMessage(h_button_edit,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    // SendMessage(h_button_theme, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    // SendMessage(h_button_save, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    // SendMessage(h_button_directory, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    // SendMessage(h_button_run, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    // SendMessage(h_button_terminal, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    // SendMessage(h_button_git_push, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    // SendMessage(h_button_exit, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Roboto");
+    // HMENU h_menu = CreateMenu();
+    // AppendMenu(h_menu, MF_STRING, idm_file, "file");
+    // AppendMenu(h_menu, MF_STRING, idm_edit, "edit");
+    // AppendMenu(h_menu, MF_STRING, idm_theme, "theme");
+    // AppendMenu(h_menu, MF_STRING, idm_save, "save");
+    // AppendMenu(h_menu, MF_STRING, idm_directory, "directory");
+    // AppendMenu(h_menu, MF_STRING, idm_run, "run");
+    // AppendMenu(h_menu, MF_STRING, idm_terminal, "terminal");
+    // AppendMenu(h_menu, MF_STRING, idm_git_push, "git_push");
+    // AppendMenu(h_menu, MF_STRING, idm_exit, "exit");
+    // SetMenu(hWnd, h_menu);
+    HWND h_button_file = CreateWindowEx(0, "BUTTON", "file",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        10, 10, 80, 30, hWnd, (HMENU)idm_file, hInstance, NULL);
+    HWND h_button_edit = CreateWindowEx(0, "BUTTON", "edit",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        100, 10, 80, 30, hWnd, (HMENU)idm_edit, hInstance, NULL);
+    HWND h_button_theme = CreateWindowEx(0, "BUTTON", "theme",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        190, 10, 80, 30, hWnd, (HMENU)idm_theme, hInstance, NULL);
+    HWND h_button_save = CreateWindowEx(0, "BUTTON", "save",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        280, 10, 80, 30, hWnd, (HMENU)idm_save, hInstance, NULL);
+    HWND h_button_directory = CreateWindowEx(0, "BUTTON", "directory",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        370, 10, 80, 30, hWnd, (HMENU)idm_directory, hInstance, NULL);
+    HWND h_button_run = CreateWindowEx(0, "BUTTON", "run",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        460, 10, 80, 30, hWnd, (HMENU)idm_run, hInstance, NULL);
+    HWND h_button_terminal = CreateWindowEx(0, "BUTTON", "terminal",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        550, 10, 80, 30, hWnd, (HMENU)idm_terminal, hInstance, NULL);
+    HWND h_button_git_push = CreateWindowEx(0, "BUTTON", "git push",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        640, 10, 80, 30, hWnd, (HMENU)idm_git_push, hInstance, NULL);
+    HWND h_button_exit = CreateWindowEx(0, "BUTTON", "exit",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        730, 10, 80, 30, hWnd, (HMENU)idm_exit, hInstance, NULL);
+    SendMessage(h_button_file,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    SendMessage(h_button_edit,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    SendMessage(h_button_theme, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    SendMessage(h_button_save, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    SendMessage(h_button_directory, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    SendMessage(h_button_run, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    SendMessage(h_button_terminal, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    SendMessage(h_button_git_push, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
+    SendMessage(h_button_exit, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
