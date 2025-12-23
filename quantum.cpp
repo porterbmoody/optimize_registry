@@ -16,6 +16,8 @@
 #include <iostream>
 #include <windows.h>
 #include <cstdlib>
+#include "embedded_terminal.h"
+
 HWND hEdit;
 HWND hButton;
 HBRUSH hBackgroundBrush;
@@ -23,28 +25,27 @@ HBRUSH hEditBrush;
 HWND hConsoleChild;
 HWND hTerminal;
 
+embedded_terminal* terminal = nullptr;
 bool terminalVisible = true;
+
+std::string current_source_file = "new_file1.cpp";
+std::string current_exe = "new_file1.exe";
+
+// terminal = new embedded_terminal(hWnd, 0, 300, 1000, 300);
 
 void update_terminal_position(HWND parent)
 {
     if (!hConsoleChild || !terminalVisible) return;
-
     RECT rcClient;
     GetClientRect(parent, &rcClient);
-
-    int terminalHeight = rcClient.bottom / 3; // bottom 1/3
+    int terminalHeight = rcClient.bottom / 3;
     int editorHeight = rcClient.bottom - terminalHeight;
-
-    // Editor resizes
     MoveWindow(hEdit, 0, 40, rcClient.right, editorHeight - 40, TRUE);
-
-    // Terminal resizes
     SetWindowPos(hConsoleChild, NULL,
                  0, editorHeight,
                  rcClient.right, terminalHeight,
                  SWP_NOZORDER);
 }
-
 
 bool write_text_file(const char* path, const std::string& text)
 {
@@ -99,7 +100,7 @@ void on_save(HWND)
             normalized.push_back(code[i]);
         }
     }
-    write_text_file("new_file1.cpp", normalized);
+    write_text_file(current_source_file, normalized);
 }
 void on_theme(HWND) { std::cout << "theme\n"; }
 void on_terminal(HWND hWnd) {
@@ -109,18 +110,36 @@ void on_terminal(HWND hWnd) {
 void on_run(HWND hWnd)
 {
     on_save(hWnd);
-    int compileResult = system(
-        "C:/msys64/mingw64/bin/c++.exe new_file1.cpp -o new_file1_tmp.exe -std=c++17 -Wall"
-    );
+    std::string compileCmd = "C:/msys64/mingw64/bin/c++.exe new_file1.cpp -o new_file1.exe -std=c++17 -Wall";
+    std::string compileCmd = "C:/msys64/mingw64/bin/c++.exe " + current_source_file + " -o " + current_exe + " -std=c++17 -Wall";
+    terminal = new embedded_terminal(hWnd, 0, 300, 1000, 300);
+    terminal->appendOutput("Compiling...\n");
+    int compileResult = system(compileCmd.c_str());
     if (compileResult != 0) {
-        std::cerr << "Compilation failed!" << std::endl;
+        terminal->appendOutput("Compilation failed!\n");
         return;
     }
-    DeleteFileA("new_file1.exe");
-    MoveFileA("new_file1_tmp.exe", "new_file1.exe");
-    int runResult = system("new_file1.exe");
-    std::cout << "Program exited with code: " << runResult << std::endl;
+    terminal->appendOutput("Compilation successful.\nRunning program...\n");
+    terminal->runProgram("new_file1.exe");
+    terminal->appendOutput("Program finished.\n");
 }
+
+// void on_run(HWND hWnd)
+// {
+//     on_save(hWnd);
+//     int compileResult = system(
+//         "C:/msys64/mingw64/bin/c++.exe new_file1.cpp -o new_file1_tmp.exe -std=c++17 -Wall"
+//     );
+//     if (compileResult != 0) {
+//         std::cerr << "Compilation failed!" << std::endl;
+//         return;
+//     }
+//     DeleteFileA("new_file1.exe");
+//     MoveFileA("new_file1_tmp.exe", "new_file1.exe");
+//     int runResult = system("new_file1.exe");
+//     std::cout << "Program exited with code: " << runResult << std::endl;
+// }
+
 // void on_run(HWND hWnd)
 // {
 //     on_save(hWnd);
@@ -163,6 +182,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message) 
     {
         case WM_CREATE:
+            terminal = new embedded_terminal(hWnd, 0, 300, 1000, 300);
             hBackgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
             hEditBrush = CreateSolidBrush(RGB(20, 20, 20));
             hEdit = CreateWindowEx(0, "EDIT", NULL,
@@ -209,7 +229,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return 0;
 }
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         freopen("CONOUT$", "w", stdout);
@@ -235,7 +254,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         CW_USEDEFAULT, CW_USEDEFAULT, 1000, 600, NULL, NULL, hInstance, NULL);
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
-
     HWND hEdit = CreateWindowEx(0, "EDIT", "",
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
         0, 50, 1000, 600, hWnd, NULL, hInstance, NULL);
