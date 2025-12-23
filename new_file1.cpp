@@ -1,8 +1,10 @@
-#include <ostream>
 #include <iostream>
+#include <string>
 
 int main() {
-    int x = 5;
-    std::cout << "The value of x is: " << x << std::endl;
+    std::string name;
+    std::cout << "What's your name? ";
+    std::getline(std::cin, name);
+    std::cout << "Hello, " << name << "!" << std::endl;
     return 0;
 }

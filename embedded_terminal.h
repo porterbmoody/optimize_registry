@@ -6,12 +6,17 @@ class embedded_terminal
 {
 public:
     embedded_terminal(HWND parent, int x, int y, int width, int height);
-    void runProgram(const std::string& exePath);
-    void appendOutput(const std::string& text);
+    ~embedded_terminal();
+
+    void execute_command(const std::string& exePath);
+    void append_output(const std::string& text);
+
 private:
     HWND hTerminal;
     HANDLE hReadPipe;
     HANDLE hWritePipe;
+    HBRUSH hBlackBrush = CreateSolidBrush(RGB(0,0,0));
+
     void createPipes();
-    void readOutput(HANDLE hProcess);
+    void read_output(HANDLE hProcess);
 };

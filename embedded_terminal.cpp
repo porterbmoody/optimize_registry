@@ -10,7 +10,7 @@ embedded_terminal::embedded_terminal(HWND parent, int x, int y, int width, int h
     );
 }
 
-void embedded_terminal::appendOutput(const std::string& text)
+void embedded_terminal::append_output(const std::string& text)
 {
     int len = GetWindowTextLengthA(hTerminal);
     SendMessageA(hTerminal, EM_SETSEL, len, len);
@@ -31,7 +31,7 @@ void embedded_terminal::createPipes()
     SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
 }
 
-void embedded_terminal::readOutput(HANDLE hProcess)
+void embedded_terminal::read_output(HANDLE hProcess)
 {
     char buffer[4096];
     DWORD read;
@@ -39,7 +39,7 @@ void embedded_terminal::readOutput(HANDLE hProcess)
     while (ReadFile(hReadPipe, buffer, sizeof(buffer) - 1, &read, NULL) && read > 0)
     {
         buffer[read] = 0;
-        appendOutput(buffer);
+        append_output(buffer);
     }
 
     CloseHandle(hReadPipe);
@@ -47,7 +47,7 @@ void embedded_terminal::readOutput(HANDLE hProcess)
     CloseHandle(hProcess);
 }
 
-void embedded_terminal::runProgram(const std::string& exePath)
+void embedded_terminal::execute_command(const std::string& exePath)
 {
     createPipes();
 
@@ -67,5 +67,5 @@ void embedded_terminal::runProgram(const std::string& exePath)
     }
 
     CloseHandle(hWritePipe);
-    readOutput(pi.hProcess);
+    read_output(pi.hProcess);
 }

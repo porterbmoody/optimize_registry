@@ -9,6 +9,7 @@
 #define IDI_APP_ICON 108
 #define idm_git_push 109
 #define IDC_MY_EDIT 110
+#define idm_open_file 111
 
 #include "resource.h"
 #include <string>
@@ -17,6 +18,7 @@
 #include <windows.h>
 #include <cstdlib>
 #include "embedded_terminal.h"
+#include <thread>
 
 HWND hEdit;
 HWND hButton;
@@ -24,70 +26,57 @@ HBRUSH hBackgroundBrush;
 HBRUSH hEditBrush;
 HWND hConsoleChild;
 HWND hTerminal;
+HBRUSH hButtonBrush;
 
 embedded_terminal* terminal = nullptr;
 bool terminalVisible = true;
 
-std::string current_source_file = "new_file1.cpp";
-std::string current_exe = "new_file1.exe";
+std::string output_source_file = "new_file.cpp";
+std::string output_exe = "new_file.exe";
+std::string cpp_executable_path = "C:/msys64/mingw64/bin/c++.exe";
+int toolbarWidth = 70;
+int buttonHeight = 40;
 
-// terminal = new embedded_terminal(hWnd, 0, 300, 1000, 300);
-
+struct ButtonInfo {
+    const char* text;
+    int id;
+};
 void update_terminal_position(HWND parent)
 {
     if (!hConsoleChild || !terminalVisible) return;
     RECT rcClient;
     GetClientRect(parent, &rcClient);
-    int terminalHeight = rcClient.bottom / 3;
+    int terminalHeight = rcClient.bottom / 2;
+    int editorWidth = rcClient.right - toolbarWidth;
     int editorHeight = rcClient.bottom - terminalHeight;
-    MoveWindow(hEdit, 0, 40, rcClient.right, editorHeight - 40, TRUE);
-    SetWindowPos(hConsoleChild, NULL,
-                 0, editorHeight,
-                 rcClient.right, terminalHeight,
-                 SWP_NOZORDER);
+    MoveWindow(hEdit, toolbarWidth, terminalHeight, editorWidth, editorHeight, TRUE);
+    // SetWindowPos(hConsoleChild, NULL,toolbarWidth, editorHeight,editorWidth, terminalHeight,SWP_NOZORDER);
 }
 
-bool write_text_file(const char* path, const std::string& text)
+bool write_text_file(const std::string path, const std::string& text)
 {
     std::ofstream file(path, std::ios::binary);
     if (!file.is_open())
         return false;
-
     file.write(text.data(), text.size());
     return true;
 }
-
-void initialize_terminal(HWND parent)
-{
-    AllocConsole();
-    FILE* fp;
-    freopen_s(&fp, "CONOUT$", "w", stdout);
-    freopen_s(&fp, "CONIN$", "r", stdin);
-    hConsoleChild = GetConsoleWindow();
-    SetParent(hConsoleChild, parent);
-    LONG style = GetWindowLong(hConsoleChild, GWL_STYLE);
-    style &= ~(WS_CAPTION | WS_THICKFRAME);
-    SetWindowLong(hConsoleChild, GWL_STYLE, style);
-    RECT rcClient;
-    GetClientRect(parent, &rcClient);
-    SetWindowPos(hConsoleChild, NULL, 
-                 0, rcClient.bottom / 2,
-                 rcClient.right, rcClient.bottom / 2,
-                 SWP_NOZORDER);
-}
-
-void on_file(HWND)  { std::cout << "file\n"; }
-void on_edit(HWND)  { std::cout << "edit\n"; }
-void on_directory(HWND)  { std::cout << "directory\n"; }
+void on_file(HWND)  { terminal->append_output("file\n"); }
+void on_edit(HWND)  { terminal->append_output("edit\n");}
+void on_directory(HWND)  { terminal->append_output("directory\n"); }
 void on_save(HWND)
 {
     int length = GetWindowTextLengthA(hEdit);
     std::string code(length, '\0');
-    std::cout << "length: " << length << std::endl;
+    if (terminal) {
+        terminal->append_output("length: " + std::to_string(length) + "\n");
+    }
     GetWindowTextA(hEdit, code.data(), length + 1);
     std::string normalized;
     normalized.reserve(code.size());
-    std::cout << "saving: " << code << std::endl;
+    if (terminal) {
+        terminal->append_output("saving: " + code + "\n");
+    }
     for (size_t i = 0; i < code.size(); ++i)
     {
         if (code[i] == '\r' && i + 1 < code.size() && code[i + 1] == '\n')
@@ -100,61 +89,90 @@ void on_save(HWND)
             normalized.push_back(code[i]);
         }
     }
-    write_text_file(current_source_file, normalized);
+    write_text_file(output_source_file, normalized);
 }
-void on_theme(HWND) { std::cout << "theme\n"; }
+void on_theme(HWND) { terminal->append_output("theme"); }
+void on_open_file(HWND)
+{
+    std::ifstream file(output_source_file);
+    if (!file) {
+        if (terminal) terminal->append_output("File not found: " + output_source_file + "\n");
+        return;
+    }
+    std::string content((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+    SetWindowTextA(hEdit, content.c_str());
+    if (terminal) terminal->append_output("Loaded file: " + output_source_file + "\n");
+}
+// void on_open_file(HWND hWnd) {
+//     OPENFILENAME ofn;
+//     char szFile[MAX_PATH] = { 0 };x
+//     ZeroMemory(&ofn, sizeof(ofn));
+//     ofn.lStructSize = sizeof(ofn);
+//     ofn.hwndOwner = hWnd;
+//     ofn.lpstrFilter = "C++ Files\0*.cpp\0All Files\0*.*\0";
+//     ofn.lpstrFile = szFile;
+//     ofn.nMaxFile = sizeof(szFile);
+//     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+//     ofn.lpstrDefExt = "cpp";
+//     if (GetOpenFileName(&ofn)) {
+//         current_source_file = szFile;
+//         std::ifstream file(current_source_file);
+//         if (file) {
+//             std::string content((std::istreambuf_iterator<char>(file)),
+//                                  std::istreambuf_iterator<char>());
+//             SetWindowTextA(hEdit, content.c_str());
+//         }
+//     }
+// }
 void on_terminal(HWND hWnd) {
-    std::cout << "terminal\n" << std::endl;
-    initialize_terminal(hWnd);
+    terminal->append_output("opening terminal...\n");
+    // initialize_terminal(hWnd);
 }
 void on_run(HWND hWnd)
 {
-    on_save(hWnd);
-    std::string compileCmd = "C:/msys64/mingw64/bin/c++.exe new_file1.cpp -o new_file1.exe -std=c++17 -Wall";
-    std::string compileCmd = "C:/msys64/mingw64/bin/c++.exe " + current_source_file + " -o " + current_exe + " -std=c++17 -Wall";
-    terminal = new embedded_terminal(hWnd, 0, 300, 1000, 300);
-    terminal->appendOutput("Compiling...\n");
-    int compileResult = system(compileCmd.c_str());
-    if (compileResult != 0) {
-        terminal->appendOutput("Compilation failed!\n");
-        return;
-    }
-    terminal->appendOutput("Compilation successful.\nRunning program...\n");
-    terminal->runProgram("new_file1.exe");
-    terminal->appendOutput("Program finished.\n");
+    std::thread([hWnd]() {
+        on_save(hWnd);
+        if (output_exe.empty()) return;
+        std::string cmd_kill_process = "taskkill /IM " + output_exe + " /F";
+        terminal->execute_command(cmd_kill_process);
+        terminal->append_output("Compiling...\n");
+        std::string compile_cmd = cpp_executable_path + " " + output_source_file + " -o " + output_exe + " -std=c++17 -Wall";
+        int compileResult = system(compile_cmd.c_str());
+        if (compileResult != 0) {
+            terminal->append_output("Compilation failed!\n");
+            return;
+        }
+        terminal->append_output("Compilation successful: " + output_source_file + " -> " + output_exe + "\n");
+        terminal->execute_command(output_exe);
+        terminal->append_output("Program finished.\n");
+    }).detach();
 }
 
 // void on_run(HWND hWnd)
 // {
+//     std::string compile_cmd = cpp_executable_path +" " + output_source_file + " -o " + output_exe + " -std=c++17 -Wall";
 //     on_save(hWnd);
-//     int compileResult = system(
-//         "C:/msys64/mingw64/bin/c++.exe new_file1.cpp -o new_file1_tmp.exe -std=c++17 -Wall"
-//     );
+//     if (output_exe.empty()) {
+//         return;
+//     } else {
+//         std::string cmd_kill_process = "taskkill /IM " + output_exe + " /F";
+//         terminal->execute_command(cmd_kill_process);
+//     }
+//     terminal->append_output("Compiling...\n");
+//     int compileResult = system(compile_cmd.c_str());
 //     if (compileResult != 0) {
-//         std::cerr << "Compilation failed!" << std::endl;
+//         terminal->append_output("Compilation failed!\n");
 //         return;
 //     }
-//     DeleteFileA("new_file1.exe");
-//     MoveFileA("new_file1_tmp.exe", "new_file1.exe");
-//     int runResult = system("new_file1.exe");
-//     std::cout << "Program exited with code: " << runResult << std::endl;
-// }
-
-// void on_run(HWND hWnd)
-// {
-//     on_save(hWnd);
-//     int compileResult = system("C:/msys64/mingw64/bin/c++.exe new_file1.cpp -o new_file1.exe -std=c++17 -Wall");
-//     if (compileResult != 0) {
-//         std::cerr << "Compilation failed!" << std::endl;
-//         return;
-//     }
-//     int runResult = system("new_file1.exe");
-//     std::cout << "Program exited with code: " << runResult << std::endl;
+//     terminal->append_output("Compilation successful: "+output_source_file+" "+output_exe+".\n\n");
+//     terminal->execute_command(output_exe);
+//     terminal->append_output("Program finished.\n");
 // }
 void on_git_push(HWND)  
 { 
-    std::cout << "git push\n"; 
-    system("git_push.bat");
+    terminal->append_output("pushing to github\n");
+    terminal->execute_command("git_push.bat");
 }
 void on_exit(HWND hWnd){DestroyWindow(hWnd);}
 struct CommandHandler
@@ -167,6 +185,7 @@ struct CommandHandler
         { idm_file,      on_file },
         { idm_edit,      on_edit },
         { idm_theme,     on_theme },
+        { idm_open_file,     on_open_file },
         { idm_run,       on_run  },
         { idm_directory, on_directory },
         { idm_save,      on_save },
@@ -174,39 +193,115 @@ struct CommandHandler
         { idm_git_push,  on_git_push },
         { idm_exit,      on_exit },
     };
+HWND create_button(
+    HWND parent,
+    HINSTANCE hInstance,
+    HFONT font,
+    const char* text,
+    int id,
+    int index
+)
+{
+    HWND b = CreateWindowEx(
+        0, "BUTTON", text,
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        0, buttonHeight * index, toolbarWidth, buttonHeight,
+        parent,
+        (HMENU)(INT_PTR)id,
+        hInstance,
+        NULL
+    );
+    SendMessage(b, WM_SETFONT, (WPARAM)font, TRUE);
+    return b;
+}
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
-    int toolbarHeight = 40;
-    int terminalHeight = HIWORD(lParam) / 3;
-    int editHeight = HIWORD(lParam) - toolbarHeight - terminalHeight;
     switch (message) 
     {
         case WM_CREATE:
-            terminal = new embedded_terminal(hWnd, 0, 300, 1000, 300);
-            hBackgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
-            hEditBrush = CreateSolidBrush(RGB(20, 20, 20));
-            hEdit = CreateWindowEx(0, "EDIT", NULL,
-                                   WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
-                                   0, 0, 0, 0,
-                                   hWnd, (HMENU)1, GetModuleHandle(NULL), NULL);
+        {
+            HINSTANCE hInstance = GetModuleHandle(NULL);
+            HFONT hToolbarFont = CreateFont(
+                18, 0, 0, 0, FW_NORMAL,
+                FALSE, FALSE, FALSE,
+                DEFAULT_CHARSET,
+                OUT_DEFAULT_PRECIS,
+                CLIP_DEFAULT_PRECIS,
+                CLEARTYPE_QUALITY,
+                DEFAULT_PITCH | FF_DONTCARE,
+                "Audiowide"
+            );
+            RECT rcClient;
+            GetClientRect(hWnd, &rcClient);
+            
+            int clientWidth = rcClient.right - rcClient.left;
+            int clientHeight = rcClient.bottom - rcClient.top;
+            int rightX = toolbarWidth;
+            int rightWidth = clientWidth - toolbarWidth;
+            int terminalHeight = clientHeight / 2;
+            int editorHeight = clientHeight - terminalHeight;
+
+            hEdit = CreateWindowEx(0, "EDIT", "",
+                WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+                rightX, 0,
+                rightWidth, editorHeight,
+                hWnd, NULL, hInstance, NULL);
+                hBackgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
+                hEditBrush = CreateSolidBrush(RGB(20, 20, 20));
+                hButtonBrush = CreateSolidBrush(RGB(0, 0, 0));
+                ButtonInfo buttons[] = {
+                    {"file",      idm_file},
+                    {"open file", idm_open_file},
+                    {"edit",      idm_edit},
+                    {"theme",     idm_theme},
+                    {"directory", idm_directory},
+                    {"run",       idm_run},
+                    {"terminal",  idm_terminal},
+                    {"git push",  idm_git_push},
+                    {"save",      idm_save},
+                    {"exit",      idm_exit},
+                };
+                for (int i = 0; i < sizeof(buttons)/sizeof(buttons[0]); ++i) {
+                    create_button(hWnd, hInstance, hToolbarFont, buttons[i].text, buttons[i].id, i);
+                }
+            terminal = new embedded_terminal(hWnd, rightX, editorHeight, rightWidth, terminalHeight);
             break;
+        }
         case WM_SIZE:
         {
-            update_terminal_position(hWnd);
             RECT rc;
             GetClientRect(hWnd, &rc);
-            int toolbarHeight = 40;
-            int terminalHeight = rc.bottom / 3;
-            int editHeight = rc.bottom - toolbarHeight - terminalHeight;
-            MoveWindow(hEdit, 0, toolbarHeight, rc.right, editHeight, TRUE);
+            int terminalHeight = rc.bottom / 2;
+            MoveWindow(hEdit, toolbarWidth, 0, rc.right - toolbarWidth, rc.bottom - terminalHeight, TRUE);
+            update_terminal_position(hWnd);
+            break;
         }
-        break;
         case WM_CTLCOLOREDIT:
         {
             HDC hdc = (HDC)wParam;
             SetTextColor(hdc, RGB(220, 220, 220));
             SetBkColor(hdc, RGB(20, 20, 20));
             return (LRESULT)hEditBrush;
+        }
+        // case WM_CTLCOLOREDIT:
+        // {
+        //     HDC hdc = (HDC)wParam;
+        //     HWND hwndCtrl = (HWND)lParam;
+        //     if (hwndCtrl == hTerminal)
+        //     {
+        //         SetTextColor(hdc, RGB(255, 255, 255));
+        //         SetBkColor(hdc, RGB(0, 0, 0));
+        //         return (LRESULT)hBlackBrush;
+        //     }
+        //     break;
+        // }
+        case WM_CTLCOLORBTN:
+        {
+            // std::cout <<  "WM_CTLCOLORBTN" << std::endl;
+            HDC hdc = (HDC)wParam;
+            SetTextColor(hdc, RGB(220, 220, 220));
+            SetBkMode(hdc, TRANSPARENT);
+            return (INT_PTR)hButtonBrush;
         }
         case WM_COMMAND:
         {
@@ -229,6 +324,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return 0;
 }
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         freopen("CONOUT$", "w", stdout);
@@ -251,16 +347,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.lpszClassName = "TextEditorClass";
     RegisterClassEx(&wc);
     HWND hWnd = CreateWindowEx(0, "TextEditorClass", "C++ Integrated Development Environment", WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 1000, 600, NULL, NULL, hInstance, NULL);
+        CW_USEDEFAULT, CW_USEDEFAULT, 1100, 700, NULL, NULL, hInstance, NULL);
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
-    HWND hEdit = CreateWindowEx(0, "EDIT", "",
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
-        0, 50, 1000, 600, hWnd, NULL, hInstance, NULL);
-    HFONT hToolbarFont = CreateFont(
-        18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Roboto");
+
+    // HWND hEdit = CreateWindowEx(0, "EDIT", "",
+    //     WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+    //     0, toolbarWidth, 400, 500, hWnd, NULL, hInstance, NULL);
+    // HFONT hToolbarFont = CreateFont(
+    //     18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    //     DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+    //     CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Roboto");
     // HMENU h_menu = CreateMenu();
     // AppendMenu(h_menu, MF_STRING, idm_file, "file");
     // AppendMenu(h_menu, MF_STRING, idm_edit, "edit");
@@ -272,42 +369,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // AppendMenu(h_menu, MF_STRING, idm_git_push, "git_push");
     // AppendMenu(h_menu, MF_STRING, idm_exit, "exit");
     // SetMenu(hWnd, h_menu);
-    HWND h_button_file = CreateWindowEx(0, "BUTTON", "file",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        10, 10, 80, 30, hWnd, (HMENU)idm_file, hInstance, NULL);
-    HWND h_button_edit = CreateWindowEx(0, "BUTTON", "edit",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        100, 10, 80, 30, hWnd, (HMENU)idm_edit, hInstance, NULL);
-    HWND h_button_theme = CreateWindowEx(0, "BUTTON", "theme",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        190, 10, 80, 30, hWnd, (HMENU)idm_theme, hInstance, NULL);
-    HWND h_button_save = CreateWindowEx(0, "BUTTON", "save",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        280, 10, 80, 30, hWnd, (HMENU)idm_save, hInstance, NULL);
-    HWND h_button_directory = CreateWindowEx(0, "BUTTON", "directory",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        370, 10, 80, 30, hWnd, (HMENU)idm_directory, hInstance, NULL);
-    HWND h_button_run = CreateWindowEx(0, "BUTTON", "run",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        460, 10, 80, 30, hWnd, (HMENU)idm_run, hInstance, NULL);
-    HWND h_button_terminal = CreateWindowEx(0, "BUTTON", "terminal",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        550, 10, 80, 30, hWnd, (HMENU)idm_terminal, hInstance, NULL);
-    HWND h_button_git_push = CreateWindowEx(0, "BUTTON", "git push",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        640, 10, 80, 30, hWnd, (HMENU)idm_git_push, hInstance, NULL);
-    HWND h_button_exit = CreateWindowEx(0, "BUTTON", "exit",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        730, 10, 80, 30, hWnd, (HMENU)idm_exit, hInstance, NULL);
-    SendMessage(h_button_file,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_edit,  WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_theme, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_save, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_directory, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_run, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_terminal, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_git_push, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
-    SendMessage(h_button_exit, WM_SETFONT, (WPARAM)hToolbarFont, TRUE);
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
